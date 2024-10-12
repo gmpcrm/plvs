@@ -1,70 +1,47 @@
-#version 330 core
+#version 140
 
-// visualization shader 
+// visualization shader
 
-// first vertex shader which processes one vertex per time 
+attribute vec3 position; // Input vertex position
+attribute vec2 label;    // Now using vec2 of floats
 
-layout (location = 0) in vec3 position; // input from glEnableVertexAttribArray(0)
-layout (location = 1) in uvec2 label;   // input from glEnableVertexAttribArray(1)
-
-// global input from normal code 
 uniform mat4 matModelView;
 
-// output towards geometry shader
-out uvec3 vColor;    
-out vec3 vPosition;
-out uint vLabel;
-out uint vLabelConfidence; 
+varying vec3 vColor;
+varying float vLabel;
+varying float vLabelConfidence;
 
+// Constants remain the same (ensure they are floats)
+const float ICOLOR = 5.0;
+const float DELTACOLOR = (256.0 / ICOLOR);
+const float minColorVal = 256.0 / ICOLOR;
+const float rangeColor = (256.0 / ICOLOR) * (ICOLOR - 1.0);
+const float PRIME_NUMBER = 997.0;
 
-const uint ICOLOR = 5u;
-const uint DELTACOLOR = (256u/ICOLOR);
-
-const uint minColorVal = 256u/ICOLOR;
-const uint rangeColor  = (256u/ICOLOR)*(ICOLOR-1u);
-
-const uint PRIME_NUMBER=997u;
-
-uvec3 decodeColor(uint c)
+vec3 decodeColor(float c)
 {
-    uint intcolor = c;
-    //uint intcolor = (c >> 16) & 0xFFu; 
+    if (c == 0.0)
+        return vec3(0.0, 0.0, 0.0);
 
-    if(intcolor == 0u) 
-        return uvec3(0u,0u,0u);
+    float numColor = (c * PRIME_NUMBER);
 
-    uint numColor = (intcolor*PRIME_NUMBER);
-
-    uvec3 col;
-    col.r = minColorVal + uint(numColor%rangeColor);
-    numColor = numColor/rangeColor;
-    col.g = minColorVal + uint(numColor%rangeColor);
-    numColor = numColor/rangeColor;
-    col.b = minColorVal + uint(numColor%rangeColor);
-    return col;
+    vec3 col;
+    col.r = minColorVal + mod(numColor, rangeColor);
+    numColor = floor(numColor / rangeColor);
+    col.g = minColorVal + mod(numColor, rangeColor);
+    numColor = floor(numColor / rangeColor);
+    col.b = minColorVal + mod(numColor, rangeColor);
+    return col / 255.0; // Normalize color components
 }
-
-uvec3 decodeColorS(uint c)
-{
-    if(c == 0u) 
-        return uvec3(0u,0u,0u);
-    else
-        return uvec3(0u,0u,255u);
-}
-
-uint decodeLabelConfidence(uint data)
-{
-    return uint(int(data) & 0xFF); 
-}
-
 
 void main()
 {
-    vPosition = position;
-    vColor    = decodeColor(label[0]);
-    vLabel    = label[0]; 
-    vLabelConfidence = label[1];
+    float labelValue = label.x;
+    float labelConfidenceValue = label.y;
 
-    gl_Position = matModelView * vec4(position.xyz, 1.0f);
+    vColor = decodeColor(labelValue);
+    vLabel = labelValue;
+    vLabelConfidence = labelConfidenceValue;
 
+    gl_Position = matModelView * vec4(position, 1.0);
 }

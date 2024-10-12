@@ -1,16 +1,21 @@
-#version 330 core
+#version 140
 
-// visualization shader 
+// visualization shader
 
-// third (after vertex and geometry shader) comes the fragment shader which processes one vertex color per time
+varying vec3 vColor;
+varying float vLabel;
+varying float vLabelConfidence;
 
-// input from geometry shader  
-in vec3 colorGeom;
-
-// final fragment output (must be vec4)
-out vec4 colorFrag;
+uniform float labelConfidenceThreshold;
 
 void main()
 {
-    colorFrag = vec4(colorGeom,1.0f);
+    if (vLabel > 0.0 && vLabelConfidence >= labelConfidenceThreshold)
+    {
+        gl_FragColor = vec4(vColor, 1.0);
+    }
+    else
+    {
+        discard; // Skip rendering this fragment
+    }
 }
