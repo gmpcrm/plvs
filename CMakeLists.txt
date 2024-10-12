@@ -384,6 +384,7 @@ ${Boost_INCLUDE_DIRS}
 ${GLFW_INCLUDE_DIRS}
 ${CHOLMOD_INCLUDE_DIR}
 )
+# /opt/SuperSLAM/include
 
 # If RealSense SDK is found the library is added and its examples compiled
 if(realsense2_FOUND)
@@ -438,6 +439,7 @@ ${PROJECT_SOURCE_DIR}/Thirdparty/voxblox/lib/libvoxblox_proto.a
 ${PROJECT_SOURCE_DIR}/Thirdparty/voxblox_server/lib/libvoxblox_server.a
 ${LIBELAS_LIBRARIES}
 ${LIBSGM_LIBRARIES}
+/opt/SuperSLAM/lib/libSuperSLAM.so
 )
 
 link_directories( 
@@ -636,6 +638,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Monocular)
 add_executable(mono_tum
         Examples/Monocular/mono_tum.cc)
 target_link_libraries(mono_tum ${CORE_LIBS} ${EXTERNAL_LIBS} ${EXTERNAL_CORE_LIBS})
+
+add_executable(mono_tum_superslam
+        Examples/Monocular/mono_tum_superslam.cc)
+target_link_libraries(mono_tum_superslam ${CORE_LIBS} ${EXTERNAL_LIBS} ${EXTERNAL_CORE_LIBS})
 
 add_executable(mono_kitti
         Examples/Monocular/mono_kitti.cc)
