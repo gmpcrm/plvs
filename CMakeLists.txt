@@ -453,6 +453,7 @@ src/GlObjectList.cc
 src/g2o/types_sba_line.cpp
 src/g2o/types_six_dof_expmap2.cpp
 src/g2o/types_seven_dof_expmap2.cpp
+src/g2o/types_seven_dof_expmap.cpp
 )
 
 if (WITH_CUDA)
