@@ -1680,9 +1680,9 @@ bool Tracking::TrackLocalMap()
         return false;
     }
 
-    if( nFeatureMatchesInliers < 30 )
+    if( nFeatureMatchesInliers < 10 )
     {
-        std::cout << "Tracking::TrackLocalMap() - FAILURE - mnMatchesInliers+mnLineTrackWeigth*mnLineMatchesInliers<30): " << nFeatureMatchesInliers << std::endl;         
+        std::cout << "Tracking::TrackLocalMap() - FAILURE - mnMatchesInliers+mnLineTrackWeigth*mnLineMatchesInliers<10): " << nFeatureMatchesInliers << std::endl;         
         std::cout << "Tracking::TrackLocalMap() - FAILURE - relying on mnMatchesInliers: " << mnMatchesInliers << ", mnLineMatchesInliers: " << mnLineMatchesInliers << std::endl;
         return false;
     }

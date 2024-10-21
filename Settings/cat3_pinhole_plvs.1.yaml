@@ -46,7 +46,7 @@ ORBextractor.iniThFAST: 12
 ORBextractor.minThFAST: 8
 
 Line.on: 1
-Line.nfeatures: 40
+Line.nfeatures: 60
 
 #--------------------------------------------------------------------------------------------
 # Viewer Parameters
