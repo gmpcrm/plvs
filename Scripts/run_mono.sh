@@ -1,7 +1,7 @@
 #!/usr/bin/env bash 
 
 # Путь к вашему набору данных
-DATASET_PATH="$HOME/datasets/aeroton/2024-09-04-23_12_43"
+DATASET_PATH="/aeroton/Camera/2024-10-09-21_01_07"
 
 # Путь к словарю ORBvoc
 VOCABULARY_PATH="../Vocabulary/ORBvoc.txt"
