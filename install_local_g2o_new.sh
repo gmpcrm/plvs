@@ -34,7 +34,7 @@ if [[ ! -f install/lib/libg2o_core.so ]]; then
     G2O_OPTIONS="-DBUILD_WITH_MARCH_NATIVE=ON -DG2O_BUILD_EXAMPLES=OFF" 
     echo "compiling with options: $G2O_OPTIONS $EXTERNAL_OPTION" 
     cmake .. -DCMAKE_INSTALL_PREFIX="`pwd`/../install" -DCMAKE_BUILD_TYPE=Release $G2O_OPTIONS $EXTERNAL_OPTION
-	make -j 8
+	make -j 1
     make install 
 fi 
 cd $SCRIPT_DIR
