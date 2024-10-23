@@ -47,8 +47,9 @@ if [ ! -f /etc/apt/sources.list.d/librealsense.list ]; then
     sudo tee /etc/apt/sources.list.d/librealsense.list
     sudo apt-get update
 fi 
-sudo apt-get install -y librealsense2-dkms librealsense2-utils
-sudo apt-get install -y librealsense2-dev librealsense2-dbg
+
+# sudo apt-get install -y librealsense2-dkms librealsense2-utils
+# sudo apt-get install -y librealsense2-dev librealsense2-dbg
 
 # ros 
 # see https://catkin-tools.readthedocs.io/en/latest/installing.html
