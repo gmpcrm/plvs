@@ -217,7 +217,7 @@ if [ ! -f opencv/install/lib/libopencv_core.so ]; then
           -DBUILD_EXAMPLES=OFF \
           -Wno-deprecated-gpu-targets ..
     fi
-    make -j8
+    make -j4 -l2
     make install 
 fi
 

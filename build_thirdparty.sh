@@ -74,7 +74,7 @@ if [[ ! -f build/src/libpangolin.so && ! -f build/libpango_core.so ]]; then
 	cd build
 	#cmake .. -DCMAKE_BUILD_TYPE=Release -DAVFORMAT_INCLUDE_DIR="" -DCPP11_NO_BOOST=ON $EXTERNAL_OPTION
 	cmake .. -DCMAKE_INSTALL_PREFIX="`pwd`/../install" -DCMAKE_BUILD_TYPE=Release $EXTERNAL_OPTION    
-	make -j 8
+	make -j4 -l2
         make install     
 fi
 cd $SCRIPT_DIR
@@ -86,7 +86,7 @@ cd Thirdparty/DBoW2
 make_buid_dir
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release $EXTERNAL_OPTION
-make -j 8
+make -j4 -l2
 cd $SCRIPT_DIR
 
 print_blue '================================================'
@@ -99,7 +99,7 @@ fi
 make_buid_dir
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release $EXTERNAL_OPTION
-make -j 8
+make -j4 -l2
 cd $SCRIPT_DIR
 
 ./install_local_g2o_new.sh $EXTERNAL_OPTION
@@ -114,7 +114,7 @@ fi
 make_buid_dir
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release $EXTERNAL_OPTION
-make -j 8
+make -j4 -l2
 cd $SCRIPT_DIR
 
 print_blue '================================================'
@@ -124,7 +124,7 @@ cd Thirdparty/open_chisel
 make_buid_dir
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release $EXTERNAL_OPTION
-make -j 8
+make -j4 -l2
 cd $SCRIPT_DIR
 
 print_blue '================================================'
@@ -134,7 +134,7 @@ cd Thirdparty/chisel_server
 make_buid_dir
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release $EXTERNAL_OPTION
-make -j 8
+make -j4 -l2
 cd $SCRIPT_DIR
 
 print_blue '================================================'
@@ -148,7 +148,7 @@ if [[ -n "$HAVE_SSE4" ]] || [[ -n "$HAVE_AVX" ]] ; then
 	make_buid_dir
 	cd build
 	cmake .. -DCMAKE_BUILD_TYPE=Release $EXTERNAL_OPTION
-	make -j 8
+	make -j4 -l2
 fi
 cd $SCRIPT_DIR
 
@@ -162,7 +162,7 @@ fi
 make_buid_dir
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release $EXTERNAL_OPTION
-make -j 8
+make -j4 -l2
 # HACK (to be fixed inside cmake) copy the protobuffer files in the include folder
 if [ ! -f Thirdparty/voxblox/include/Block.pb.h ] && [ ! -f Thirdparty/voxblox/include/Layer.pb.h ] ; then
     cmake .. -DCMAKE_BUILD_TYPE=Release $EXTERNAL_OPTION
@@ -176,7 +176,7 @@ cd Thirdparty/voxblox_server
 make_buid_dir
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release $EXTERNAL_OPTION
-make -j 8
+make -j4 -l2
 cd $SCRIPT_DIR
 
 print_blue '================================================'
@@ -187,7 +187,7 @@ if [[ -n "$HAVE_SSE3" ]]; then
     make_buid_dir
     cd build
     cmake .. -DCMAKE_BUILD_TYPE=Release $EXTERNAL_OPTION
-    make -j 8
+    make -j4 -l2
 fi
 cd $SCRIPT_DIR
 
@@ -209,7 +209,7 @@ if [ $CUDA_FOUND -eq 1 ]; then
     make_buid_dir
     cd build
     cmake .. -DCMAKE_BUILD_TYPE=Release $EXTERNAL_OPTION
-    make -j 8
+    make -j4 -l2
 fi
 cd $SCRIPT_DIR
 
@@ -220,7 +220,7 @@ cd Thirdparty/line_descriptor
 make_buid_dir
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release $EXTERNAL_OPTION
-make -j 8
+make -j4 -l2
 cd $SCRIPT_DIR
 
 print_blue '================================================'
