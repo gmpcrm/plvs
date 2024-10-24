@@ -3,6 +3,7 @@ project(libelas_gpu)
 
 set(CPP_STANDARD_VERSION "17" CACHE STRING "Desired C++ standard version") # need C++17 given the following error "nvcc fatal   : Value 'c++20' is not defined for option 'std'"
 set(WITH_GPU OFF CACHE BOOL "Added GPU support")
+set(USE_CUDA OFF CACHE BOOL "Added CUDA support")
 
 IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release)
