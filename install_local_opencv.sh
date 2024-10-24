@@ -193,7 +193,7 @@ if [ ! -f opencv/install/lib/libopencv_core.so ]; then
           -DBUILD_EXAMPLES=OFF \
           ..
     fi
-    make -j$(nproc)
+    make -j4 -l2
     make install 
 fi
 
