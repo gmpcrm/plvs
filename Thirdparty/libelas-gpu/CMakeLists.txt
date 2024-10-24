@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 2.8.8)
 project(libelas_gpu)
 
 set(CPP_STANDARD_VERSION "17" CACHE STRING "Desired C++ standard version") # need C++17 given the following error "nvcc fatal   : Value 'c++20' is not defined for option 'std'"
-set(WITH_GPU ON CACHE BOOL "Added GPU support")
+set(WITH_GPU OFF CACHE BOOL "Added GPU support")
+set(USE_CUDA OFF CACHE BOOL "Added CUDA support")
 
 IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release)
@@ -18,7 +19,7 @@ find_package(CUDA)
 if (CUDA_FOUND AND WITH_GPU)
     set(USE_CUDA true)     # N.B.: here opencv libs are not used!
 endif()
-MESSAGE("USE_CUDA ${USE_CUDA}")
+MESSAGE("USE_CUDA: ${USE_CUDA}")
 
 # Set the C++ standard 
 set(CMAKE_CXX_STANDARD ${CPP_STANDARD_VERSION})
