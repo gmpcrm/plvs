@@ -1172,158 +1172,182 @@ void Tracking::StereoInitialization()
 
 void Tracking::MonocularInitialization()
 {
-    /// < TODO: add support for line segments init 
-    
-    if(!mpInitializer)
+    if (!mpInitializer)
     {
-        // Set Reference Frame
-        if(mCurrentFrame.mvKeys.size()>kNumMinFeaturesMonoInitialization)
+        // Установка начального кадра
+        if (mCurrentFrame.N > kNumMinFeaturesMonoInitialization)
         {
             mInitialFrame = Frame(mCurrentFrame);
             mLastFrame = Frame(mCurrentFrame);
-            mvbPrevMatched.resize(mCurrentFrame.mvKeysUn.size());
-            for(size_t i=0; i<mCurrentFrame.mvKeysUn.size(); i++)
-                mvbPrevMatched[i]=mCurrentFrame.mvKeysUn[i].pt;
 
-            if(mpInitializer)
-                delete mpInitializer;
-
-            mpInitializer =  new Initializer(mCurrentFrame,1.0,200);
-
-            fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
-
+            // Инициализация
+            mpInitializer = new Initializer(mCurrentFrame, 1.0, 200);
             return;
         }
     }
     else
     {
-        // Try to initialize
-        if((int)mCurrentFrame.mvKeys.size()<=kNumMinFeaturesMonoInitialization)
+        // Попытка инициализации
+        if (mCurrentFrame.N <= kNumMinFeaturesMonoInitialization)
         {
             delete mpInitializer;
-            mpInitializer = static_cast<Initializer*>(NULL);
-            fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
+            mpInitializer = nullptr;
             return;
         }
 
-        // Find correspondences
-        ORBmatcher matcher(0.9,true);
-        int nmatches = matcher.SearchForInitialization(mInitialFrame,mCurrentFrame,mvbPrevMatched,mvIniMatches,100);
+        // Поиск соответствий между начальными кадрами
+        ORBmatcher matcher(0.9, true);
+        std::vector<int> vMatches12;
+        int nmatches = matcher.SearchForInitialization(mInitialFrame, mCurrentFrame, vMatches12, 100);
 
-        // Check if there are enough correspondences
-        if(nmatches<100)
+        // Проверка достаточности соответствий
+        if (nmatches < 100)
         {
             delete mpInitializer;
-            mpInitializer = static_cast<Initializer*>(NULL);
+            mpInitializer = nullptr;
             return;
         }
 
-        cv::Mat Rcw; // Current Camera Rotation
-        cv::Mat tcw; // Current Camera Translation
-        vector<bool> vbTriangulated; // Triangulated Correspondences (mvIniMatches)
+        // Инициализация
+        cv::Mat Rcw;
+        cv::Mat tcw;
+        std::vector<cv::Point3f> vP3D;
+        std::vector<bool> vbTriangulated;
 
-        if(mpInitializer->Initialize(mCurrentFrame, mvIniMatches, Rcw, tcw, mvIniP3D, vbTriangulated))
+        if (mpInitializer->Initialize(mCurrentFrame, vMatches12, Rcw, tcw, vP3D, vbTriangulated))
         {
-            for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
-            {
-                if(mvIniMatches[i]>=0 && !vbTriangulated[i])
-                {
-                    mvIniMatches[i]=-1;
-                    nmatches--;
-                }
-            }
-
-            // Set Frame Poses
-            mInitialFrame.SetPose(cv::Mat::eye(4,4,CV_32F));
-            cv::Mat Tcw = cv::Mat::eye(4,4,CV_32F);
-            Rcw.copyTo(Tcw.rowRange(0,3).colRange(0,3));
-            tcw.copyTo(Tcw.rowRange(0,3).col(3));
+            // Установка поз
+            mInitialFrame.SetPose(cv::Mat::eye(4, 4, CV_32F));
+            cv::Mat Tcw = cv::Mat::eye(4, 4, CV_32F);
+            Rcw.copyTo(Tcw.rowRange(0, 3).colRange(0, 3));
+            tcw.copyTo(Tcw.rowRange(0, 3).col(3));
             mCurrentFrame.SetPose(Tcw);
 
-            CreateInitialMapMonocular();
+            CreateInitialMapMonocular(vMatches12, vP3D, vbTriangulated);
         }
     }
 }
 
-void Tracking::CreateInitialMapMonocular()
+void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12, const std::vector<cv::Point3f>& vP3D, const std::vector<bool>& vbTriangulated)
 {
-    // Create KeyFrames
-    //KeyFramePtr pKFini = new KeyFrame(mInitialFrame,mpMap,mpKeyFrameDB);
-    KeyFramePtr pKFini = KeyFrameNewPtr(mInitialFrame,mpMap,mpKeyFrameDB);
-    //KeyFramePtr pKFcur = new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
-    KeyFramePtr pKFcur = KeyFrameNewPtr(mCurrentFrame,mpMap,mpKeyFrameDB);
-
+    // Создание ключевых кадров
+    KeyFramePtr pKFini = KeyFrameNewPtr(mInitialFrame, mpMap, mpKeyFrameDB);
+    KeyFramePtr pKFcur = KeyFrameNewPtr(mCurrentFrame, mpMap, mpKeyFrameDB);
 
     pKFini->ComputeBoW();
     pKFcur->ComputeBoW();
 
-    // Insert KFs in the map
+    // Добавление ключевых кадров в карту
     mpMap->AddKeyFrame(pKFini);
     mpMap->AddKeyFrame(pKFcur);
 
-    // Create MapPoints and associate to keyframes
-    for(size_t i=0; i<mvIniMatches.size();i++)
+    // Создание MapPoints и их ассоциация с ключевыми кадрами
+    for (size_t i = 0; i < vMatches12.size(); i++)
     {
-        if(mvIniMatches[i]<0)
+        if (vMatches12[i] < 0 || !vbTriangulated[i])
             continue;
 
-        //Create MapPoint.
-        cv::Mat worldPos(mvIniP3D[i]);
+        cv::Mat x3D = cv::Mat(vP3D[i]);
 
-        //MapPointPtr pMP = new MapPoint(worldPos,pKFcur,mpMap);
-        MapPointPtr pMP = MapPointNewPtr(worldPos,pKFcur,mpMap);
+        MapPointPtr pNewMP = MapPointNewPtr(x3D, pKFcur, mpMap);
 
-        pKFini->AddMapPoint(pMP,i);
-        pKFcur->AddMapPoint(pMP,mvIniMatches[i]);
+        pNewMP->AddObservation(pKFini, i);
+        pNewMP->AddObservation(pKFcur, vMatches12[i]);
 
-        pMP->AddObservation(pKFini,i);
-        pMP->AddObservation(pKFcur,mvIniMatches[i]);
+        pKFini->AddMapPoint(pNewMP, i);
+        pKFcur->AddMapPoint(pNewMP, vMatches12[i]);
 
-        pMP->ComputeDistinctiveDescriptors();
-        pMP->UpdateNormalAndDepth();
+        pNewMP->ComputeDistinctiveDescriptors();
+        pNewMP->UpdateNormalAndDepth();
 
-        //Fill Current Frame structure
-        mCurrentFrame.mvpMapPoints[mvIniMatches[i]] = pMP;
-        mCurrentFrame.mvbOutlier[mvIniMatches[i]] = false;
-
-        //Add to Map
-        mpMap->AddMapPoint(pMP);
+        mpMap->AddMapPoint(pNewMP);
     }
 
-    // Update Connections
+    // Инициализация линий
+    if (mbLineTrackerOn)
+    {
+        // Поиск соответствий линий между начальными кадрами
+        LineMatcher lineMatcher;
+        std::vector<int> vLineMatches12;
+        int nLineMatches = lineMatcher.SearchForInitialization(mInitialFrame, mCurrentFrame, vLineMatches12);
+
+        // Триангуляция совпавших линий
+        cv::Mat P1 = mK * pKFini->GetPose().rowRange(0, 3);
+        cv::Mat P2 = mK * pKFcur->GetPose().rowRange(0, 3);
+
+        for (size_t i = 0; i < vLineMatches12.size(); i++)
+        {
+            if (vLineMatches12[i] < 0)
+                continue;
+
+            const cv::KeyLine &kl1 = mInitialFrame.mvKeyLinesUn[i];
+            const cv::KeyLine &kl2 = mCurrentFrame.mvKeyLinesUn[vLineMatches12[i]];
+
+            cv::Mat x3Ds, x3De;
+            if (TriangulateLine(kl1, kl2, P1, P2, x3Ds, x3De))
+            {
+                MapLinePtr pNewML = MapLineNewPtr(x3Ds, x3De, mpMap, pKFcur);
+
+                pNewML->AddObservation(pKFini, i);
+                pNewML->AddObservation(pKFcur, vLineMatches12[i]);
+
+                pKFini->AddMapLine(pNewML, i);
+                pKFcur->AddMapLine(pNewML, vLineMatches12[i]);
+
+                pNewML->ComputeDistinctiveDescriptors();
+                pNewML->UpdateAverageDir();
+                pNewML->UpdateNormalAndDepth();
+
+                mpMap->AddMapLine(pNewML);
+            }
+        }
+    }
+
+    // Обновление связей и оптимизация
     pKFini->UpdateConnections();
     pKFcur->UpdateConnections();
 
-    // Bundle Adjustment
-    cout << "New Map created with " << mpMap->MapPointsInMap() << " points" << endl;
+    Optimizer::GlobalBundleAdjustemnt(mpMap, 20);
 
-    Optimizer::GlobalBundleAdjustemnt(mpMap,20);
-
-    // Set median depth to 1
+    // Масштабирование начального базиса
     float medianDepth = pKFini->ComputeSceneMedianDepth(2);
-    float invMedianDepth = 1.0f/medianDepth;
+    float invMedianDepth = 1.0f / medianDepth;
 
-    if(medianDepth<0 || pKFcur->TrackedMapPoints(1)<100)
+    if (medianDepth < 0 || pKFcur->TrackedMapPoints(1) < 80)
     {
-        cout << "Wrong initialization, resetting..." << endl;
         Reset();
         return;
     }
 
-    // Scale initial baseline
+    // Масштабирование поз и точек
     cv::Mat Tc2w = pKFcur->GetPose();
-    Tc2w.col(3).rowRange(0,3) = Tc2w.col(3).rowRange(0,3)*invMedianDepth;
+    Tc2w.col(3).rowRange(0, 3) *= invMedianDepth;
     pKFcur->SetPose(Tc2w);
 
-    // Scale points
-    vector<MapPointPtr> vpAllMapPoints = pKFini->GetMapPointMatches();
-    for(size_t iMP=0; iMP<vpAllMapPoints.size(); iMP++)
+    std::vector<MapPointPtr> vpAllMapPoints = pKFini->GetMapPointMatches();
+    for (size_t i = 0; i < vpAllMapPoints.size(); i++)
     {
-        if(vpAllMapPoints[iMP])
+        if (vpAllMapPoints[i])
         {
-            MapPointPtr pMP = vpAllMapPoints[iMP];
-            pMP->SetWorldPos(pMP->GetWorldPos()*invMedianDepth);
+            MapPointPtr pMP = vpAllMapPoints[i];
+            pMP->SetWorldPos(pMP->GetWorldPos() * invMedianDepth);
             pMP->UpdateNormalAndDepth();
+        }
+    }
+
+    // Масштабирование линий
+    if (mbLineTrackerOn)
+    {
+        std::vector<MapLinePtr> vpAllMapLines = pKFini->GetMapLineMatches();
+        for (size_t i = 0; i < vpAllMapLines.size(); i++)
+        {
+            if (vpAllMapLines[i])
+            {
+                MapLinePtr pML = vpAllMapLines[i];
+                pML->SetWorldPos(pML->GetWorldPos() * invMedianDepth);
+                pML->UpdateAverageDir();
+                pML->UpdateNormalAndDepth();
+            }
         }
     }
 
@@ -1331,24 +1355,61 @@ void Tracking::CreateInitialMapMonocular()
     mpLocalMapper->InsertKeyFrame(pKFcur);
 
     mCurrentFrame.SetPose(pKFcur->GetPose());
-    mnLastKeyFrameId=mCurrentFrame.mnId;
+    mnLastKeyFrameId = mCurrentFrame.mnId;
     mpLastKeyFrame = pKFcur;
 
     mvpLocalKeyFrames.push_back(pKFcur);
     mvpLocalKeyFrames.push_back(pKFini);
-    mvpLocalMapPoints=mpMap->GetAllMapPoints();
+
+    mvpLocalMapPoints = mpMap->GetAllMapPoints();
+    if (mbLineTrackerOn)
+        mvpLocalMapLines = mpMap->GetAllMapLines();
     mpReferenceKF = pKFcur;
     mCurrentFrame.mpReferenceKF = pKFcur;
 
     mLastFrame = Frame(mCurrentFrame);
 
     mpMap->SetReferenceMapPoints(mvpLocalMapPoints);
+    if (mbLineTrackerOn)
+        mpMap->SetReferenceMapLines(mvpLocalMapLines);
 
     mpMapDrawer->SetCurrentCameraPose(pKFcur->GetPose());
 
     mpMap->mvpKeyFrameOrigins.push_back(pKFini);
 
-    mState=OK;
+    mState = OK;
+}
+
+bool Tracking::TriangulateLine(const cv::KeyLine &kl1, const cv::KeyLine &kl2, const cv::Mat &P1, const cv::Mat &P2, cv::Mat &x3Ds, cv::Mat &x3De)
+{
+    cv::Mat A(4, 4, CV_32F);
+
+    // Триангуляция начальной точки линии
+    A.row(0) = kl1.startPointX * P1.row(2) - P1.row(0);
+    A.row(1) = kl1.startPointY * P1.row(2) - P1.row(1);
+    A.row(2) = kl2.startPointX * P2.row(2) - P2.row(0);
+    A.row(3) = kl2.startPointY * P2.row(2) - P2.row(1);
+
+    cv::Mat w, u, vt;
+    cv::SVD::compute(A, w, u, vt, cv::SVD::MODIFY_A | cv::SVD::FULL_UV);
+    x3Ds = vt.row(3).t();
+    x3Ds = x3Ds.rowRange(0, 3) / x3Ds.at<float>(3);
+
+    // Триангуляция конечной точки линии
+    A.row(0) = kl1.endPointX * P1.row(2) - P1.row(0);
+    A.row(1) = kl1.endPointY * P1.row(2) - P1.row(1);
+    A.row(2) = kl2.endPointX * P2.row(2) - P2.row(0);
+    A.row(3) = kl2.endPointY * P2.row(2) - P2.row(1);
+
+    cv::SVD::compute(A, w, u, vt, cv::SVD::MODIFY_A | cv::SVD::FULL_UV);
+    x3De = vt.row(3).t();
+    x3De = x3De.rowRange(0, 3) / x3De.at<float>(3);
+
+    // Проверка, находятся ли точки перед обеими камерами
+    if ((x3Ds.at<float>(2) > 0) && (x3De.at<float>(2) > 0))
+        return true;
+    else
+        return false;
 }
 
 void Tracking::InitForRelocalizationInMap()
