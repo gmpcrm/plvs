@@ -1174,20 +1174,20 @@ void Tracking::MonocularInitialization()
 {
     if (!mpInitializer)
     {
-        // Установка начального кадра
+        // Set Reference Frame
         if (mCurrentFrame.N > kNumMinFeaturesMonoInitialization)
         {
             mInitialFrame = Frame(mCurrentFrame);
             mLastFrame = Frame(mCurrentFrame);
 
-            // Инициализация
+            // Initialize
             mpInitializer = new Initializer(mCurrentFrame, 1.0, 200);
             return;
         }
     }
     else
     {
-        // Попытка инициализации
+        // Try to initialize
         if (mCurrentFrame.N <= kNumMinFeaturesMonoInitialization)
         {
             delete mpInitializer;
@@ -1195,12 +1195,20 @@ void Tracking::MonocularInitialization()
             return;
         }
 
-        // Поиск соответствий между начальными кадрами
+        // Find correspondences
         ORBmatcher matcher(0.9, true);
-        std::vector<int> vMatches12;
-        int nmatches = matcher.SearchForInitialization(mInitialFrame, mCurrentFrame, vMatches12, 100);
 
-        // Проверка достаточности соответствий
+        // Initialize vbPrevMatched with keypoints from mInitialFrame
+        std::vector<cv::Point2f> vbPrevMatched(mInitialFrame.mvKeysUn.size());
+        for (size_t i = 0; i < mInitialFrame.mvKeysUn.size(); i++)
+        {
+            vbPrevMatched[i] = mInitialFrame.mvKeysUn[i].pt;
+        }
+
+        std::vector<int> vMatches12;
+        int nmatches = matcher.SearchForInitialization(mInitialFrame, mCurrentFrame, vbPrevMatched, vMatches12, 100);
+
+        // Check if there are enough correspondences
         if (nmatches < 100)
         {
             delete mpInitializer;
@@ -1208,7 +1216,7 @@ void Tracking::MonocularInitialization()
             return;
         }
 
-        // Инициализация
+        // Initialize
         cv::Mat Rcw;
         cv::Mat tcw;
         std::vector<cv::Point3f> vP3D;
@@ -1216,7 +1224,7 @@ void Tracking::MonocularInitialization()
 
         if (mpInitializer->Initialize(mCurrentFrame, vMatches12, Rcw, tcw, vP3D, vbTriangulated))
         {
-            // Установка поз
+            // Set poses
             mInitialFrame.SetPose(cv::Mat::eye(4, 4, CV_32F));
             cv::Mat Tcw = cv::Mat::eye(4, 4, CV_32F);
             Rcw.copyTo(Tcw.rowRange(0, 3).colRange(0, 3));
@@ -1228,20 +1236,22 @@ void Tracking::MonocularInitialization()
     }
 }
 
-void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12, const std::vector<cv::Point3f>& vP3D, const std::vector<bool>& vbTriangulated)
+void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12,
+                                        const std::vector<cv::Point3f>& vP3D,
+                                        const std::vector<bool>& vbTriangulated)
 {
-    // Создание ключевых кадров
+    // Create KeyFrames
     KeyFramePtr pKFini = KeyFrameNewPtr(mInitialFrame, mpMap, mpKeyFrameDB);
     KeyFramePtr pKFcur = KeyFrameNewPtr(mCurrentFrame, mpMap, mpKeyFrameDB);
 
     pKFini->ComputeBoW();
     pKFcur->ComputeBoW();
 
-    // Добавление ключевых кадров в карту
+    // Insert KeyFrames in Map
     mpMap->AddKeyFrame(pKFini);
     mpMap->AddKeyFrame(pKFcur);
 
-    // Создание MapPoints и их ассоциация с ключевыми кадрами
+    // Create MapPoints and associate them to keyframes
     for (size_t i = 0; i < vMatches12.size(); i++)
     {
         if (vMatches12[i] < 0 || !vbTriangulated[i])
@@ -1263,39 +1273,39 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12, con
         mpMap->AddMapPoint(pNewMP);
     }
 
-    // Инициализация линий
+    // Initialize lines
     if (mbLineTrackerOn)
     {
-        // Поиск соответствий линий между начальными кадрами
+        // Line matching between initial frames
         LineMatcher lineMatcher;
-        std::vector<int> vLineMatches12;
-        int nLineMatches = lineMatcher.SearchForInitialization(mInitialFrame, mCurrentFrame, vLineMatches12);
+        std::vector<std::pair<size_t, size_t>> vLineMatches12;
+        int nLineMatches = lineMatcher.SearchForTriangulation(mInitialFrame, mCurrentFrame, vLineMatches12);
 
-        // Триангуляция совпавших линий
+        // Triangulate matched lines
         cv::Mat P1 = mK * pKFini->GetPose().rowRange(0, 3);
         cv::Mat P2 = mK * pKFcur->GetPose().rowRange(0, 3);
 
         for (size_t i = 0; i < vLineMatches12.size(); i++)
         {
-            if (vLineMatches12[i] < 0)
-                continue;
+            size_t idx1 = vLineMatches12[i].first;
+            size_t idx2 = vLineMatches12[i].second;
 
-            const cv::line_descriptor_c::KeyLine &kl1 = mInitialFrame.mvKeyLinesUn[i];
-            const cv::line_descriptor_c::KeyLine &kl2 = mCurrentFrame.mvKeyLinesUn[vLineMatches12[i]];
+            const cv::line_descriptor_c::KeyLine &kl1 = mInitialFrame.mvKeyLinesUn[idx1];
+            const cv::line_descriptor_c::KeyLine &kl2 = mCurrentFrame.mvKeyLinesUn[idx2];
 
             cv::Mat x3Ds, x3De;
             if (TriangulateLine(kl1, kl2, P1, P2, x3Ds, x3De))
             {
                 MapLinePtr pNewML = MapLineNewPtr(x3Ds, x3De, mpMap, pKFcur);
 
-                pNewML->AddObservation(pKFini, i);
-                pNewML->AddObservation(pKFcur, vLineMatches12[i]);
+                pNewML->AddObservation(pKFini, idx1);
+                pNewML->AddObservation(pKFcur, idx2);
 
-                pKFini->AddMapLine(pNewML, i);
-                pKFcur->AddMapLine(pNewML, vLineMatches12[i]);
+                pKFini->AddMapLine(pNewML, idx1);
+                pKFcur->AddMapLine(pNewML, idx2);
 
                 pNewML->ComputeDistinctiveDescriptors();
-                pNewML->UpdateAverageDir();
+                pNewML->ComputeAverageDirection();
                 pNewML->UpdateNormalAndDepth();
 
                 mpMap->AddMapLine(pNewML);
@@ -1303,13 +1313,14 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12, con
         }
     }
 
-    // Обновление связей и оптимизация
+    // Update connections
     pKFini->UpdateConnections();
     pKFcur->UpdateConnections();
 
+    // Bundle Adjustment
     Optimizer::GlobalBundleAdjustemnt(mpMap, 20);
 
-    // Масштабирование начального базиса
+    // Scale initial baseline
     float medianDepth = pKFini->ComputeSceneMedianDepth(2);
     float invMedianDepth = 1.0f / medianDepth;
 
@@ -1319,7 +1330,7 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12, con
         return;
     }
 
-    // Масштабирование поз и точек
+    // Scale poses and points
     cv::Mat Tc2w = pKFcur->GetPose();
     Tc2w.col(3).rowRange(0, 3) *= invMedianDepth;
     pKFcur->SetPose(Tc2w);
@@ -1335,7 +1346,7 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12, con
         }
     }
 
-    // Масштабирование линий
+    // Scale lines
     if (mbLineTrackerOn)
     {
         std::vector<MapLinePtr> vpAllMapLines = pKFini->GetMapLineMatches();
@@ -1344,8 +1355,10 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12, con
             if (vpAllMapLines[i])
             {
                 MapLinePtr pML = vpAllMapLines[i];
-                pML->SetWorldPos(pML->GetWorldPos() * invMedianDepth);
-                pML->UpdateAverageDir();
+                // Scale start and end points
+                pML->SetWorldPosStart(pML->GetWorldPosStart() * invMedianDepth);
+                pML->SetWorldPosEnd(pML->GetWorldPosEnd() * invMedianDepth);
+                pML->ComputeAverageDirection();
                 pML->UpdateNormalAndDepth();
             }
         }
@@ -1380,32 +1393,41 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12, con
     mState = OK;
 }
 
-bool Tracking::TriangulateLine(const cv::line_descriptor_c::KeyLine &kl1, const cv::line_descriptor_c::KeyLine &kl2, const cv::Mat &P1, const cv::Mat &P2, cv::Mat &x3Ds, cv::Mat &x3De)
+bool Tracking::TriangulateLine(const cv::line_descriptor_c::KeyLine &kl1,
+                               const cv::line_descriptor_c::KeyLine &kl2,
+                               const cv::Mat &P1, const cv::Mat &P2,
+                               cv::Mat &x3Ds, cv::Mat &x3De)
 {
     cv::Mat A(4, 4, CV_32F);
 
-    // Триангуляция начальной точки линии
-    A.row(0) = kl1.startPointX * P1.row(2) - P1.row(0);
-    A.row(1) = kl1.startPointY * P1.row(2) - P1.row(1);
-    A.row(2) = kl2.startPointX * P2.row(2) - P2.row(0);
-    A.row(3) = kl2.startPointY * P2.row(2) - P2.row(1);
+    // Get start and end points
+    cv::Point2f kl1_start = kl1.getStartPoint();
+    cv::Point2f kl1_end = kl1.getEndPoint();
+    cv::Point2f kl2_start = kl2.getStartPoint();
+    cv::Point2f kl2_end = kl2.getEndPoint();
+
+    // Triangulate start point
+    A.row(0) = kl1_start.x * P1.row(2) - P1.row(0);
+    A.row(1) = kl1_start.y * P1.row(2) - P1.row(1);
+    A.row(2) = kl2_start.x * P2.row(2) - P2.row(0);
+    A.row(3) = kl2_start.y * P2.row(2) - P2.row(1);
 
     cv::Mat w, u, vt;
     cv::SVD::compute(A, w, u, vt, cv::SVD::MODIFY_A | cv::SVD::FULL_UV);
     x3Ds = vt.row(3).t();
     x3Ds = x3Ds.rowRange(0, 3) / x3Ds.at<float>(3);
 
-    // Триангуляция конечной точки линии
-    A.row(0) = kl1.endPointX * P1.row(2) - P1.row(0);
-    A.row(1) = kl1.endPointY * P1.row(2) - P1.row(1);
-    A.row(2) = kl2.endPointX * P2.row(2) - P2.row(0);
-    A.row(3) = kl2.endPointY * P2.row(2) - P2.row(1);
+    // Triangulate end point
+    A.row(0) = kl1_end.x * P1.row(2) - P1.row(0);
+    A.row(1) = kl1_end.y * P1.row(2) - P1.row(1);
+    A.row(2) = kl2_end.x * P2.row(2) - P2.row(0);
+    A.row(3) = kl2_end.y * P2.row(2) - P2.row(1);
 
     cv::SVD::compute(A, w, u, vt, cv::SVD::MODIFY_A | cv::SVD::FULL_UV);
     x3De = vt.row(3).t();
     x3De = x3De.rowRange(0, 3) / x3De.at<float>(3);
 
-    // Проверка, находятся ли точки перед обеими камерами
+    // Check if the 3D points are in front of both cameras
     if ((x3Ds.at<float>(2) > 0) && (x3De.at<float>(2) > 0))
         return true;
     else
