@@ -206,6 +206,16 @@ struct DefaultParameters {
 
 static DefaultParameters defaults;
 
+namespace Utils {
+    template <typename T>
+    T GetParamOrDefault(const cv::FileStorage& fSettings, const std::string& paramName, const T& defaultValue) {
+        if (fSettings[paramName].empty()) {
+            return defaultValue;
+        }
+        return (T)fSettings[paramName];
+    }
+}
+
 void SaveCameraParametersToFile(const std::string& fileName, const cv::FileStorage& fSettings, const DefaultParameters& defaults) {
     std::ofstream outFile(fileName);
     if (!outFile.is_open()) {
