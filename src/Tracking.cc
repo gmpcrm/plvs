@@ -1440,6 +1440,8 @@ bool Tracking::TrackReferenceKeyFrame()
         
     }
     
+    std::cout << "Before filtering: points found = " << nmatches << ", lines found = " << numLineMatches << std::endl;
+    
     if(nmatches<15)
     {
         std::cout << "Tracking::TrackReferenceKeyFrame() - nmatches<15: relying on " << nmatches << " point matches and " << numLineMatches << " line matches " << std::endl; 
@@ -1504,6 +1506,8 @@ bool Tracking::TrackReferenceKeyFrame()
         }        
     }
 
+    std::cout << "After filtering: points remaining = " << nmatchesMap << ", lines remaining = " << nmatchesMapLines << std::endl;
+    
     const int nmatchesMapFeatures = ( nmatchesMap + sknLineTrackWeigth*nmatchesMapLines );
 
     if(  nmatchesMapFeatures < 10 )
@@ -1730,6 +1734,8 @@ bool Tracking::TrackWithMotionModel()
 #endif        
     }
 
+    std::cout << "Before filtering: points found = " << nPointmatches << ", lines found = " << nLineMatches << std::endl;
+    
     if(nPointmatches<20)
     {
         std::cout << "Tracking::TrackWithMotionModel() - nPointmatches<20: relying on " << nPointmatches << " point matches and " << nLineMatches << " line matches " << std::endl; 
@@ -1789,6 +1795,8 @@ bool Tracking::TrackWithMotionModel()
             }
         }        
     }
+    
+    std::cout << "After filtering: points remaining = " << nMatchesMapPoints << ", lines remaining = " << nMatchesMapLines << std::endl;
     
     const int nMatchesMapFeatures = nMatchesMapPoints + sknLineTrackWeigth*nMatchesMapLines;
     if(mbOnlyTracking)
