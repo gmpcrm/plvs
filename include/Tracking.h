@@ -42,7 +42,7 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
-
+#include <line_descriptor_custom.hpp>
 #ifdef USE_CUDA
 #include <opencv2/core/cuda.hpp>
 #include <opencv2/cudafilters.hpp>
