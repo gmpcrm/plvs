@@ -181,7 +181,7 @@ protected:
     // Map initialization for monocular
     void MonocularInitialization();
     void CreateInitialMapMonocular(const std::vector<int>& vMatches12, const std::vector<cv::Point3f>& vP3D, const std::vector<bool>& vbTriangulated);
-    bool TriangulateLine(const cv::KeyLine &kl1, const cv::KeyLine &kl2, const cv::Mat &P1, const cv::Mat &P2, cv::Mat &x3Ds, cv::Mat &x3De);
+    bool TriangulateLine(const cv::line_descriptor_c::KeyLine &kl1, const cv::line_descriptor_c::KeyLine &kl2, const cv::Mat &P1, const cv::Mat &P2, cv::Mat &x3Ds, cv::Mat &x3De);
 
     void InitForRelocalizationInMap();
 

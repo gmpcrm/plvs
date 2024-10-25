@@ -1280,8 +1280,8 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12, con
             if (vLineMatches12[i] < 0)
                 continue;
 
-            const cv::KeyLine &kl1 = mInitialFrame.mvKeyLinesUn[i];
-            const cv::KeyLine &kl2 = mCurrentFrame.mvKeyLinesUn[vLineMatches12[i]];
+            const cv::line_descriptor_c::KeyLine &kl1 = mInitialFrame.mvKeyLinesUn[i];
+            const cv::line_descriptor_c::KeyLine &kl2 = mCurrentFrame.mvKeyLinesUn[vLineMatches12[i]];
 
             cv::Mat x3Ds, x3De;
             if (TriangulateLine(kl1, kl2, P1, P2, x3Ds, x3De))
@@ -1380,7 +1380,7 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12, con
     mState = OK;
 }
 
-bool Tracking::TriangulateLine(const cv::KeyLine &kl1, const cv::KeyLine &kl2, const cv::Mat &P1, const cv::Mat &P2, cv::Mat &x3Ds, cv::Mat &x3De)
+bool Tracking::TriangulateLine(const cv::line_descriptor_c::KeyLine &kl1, const cv::line_descriptor_c::KeyLine &kl2, const cv::Mat &P1, const cv::Mat &P2, cv::Mat &x3Ds, cv::Mat &x3De)
 {
     cv::Mat A(4, 4, CV_32F);
 
