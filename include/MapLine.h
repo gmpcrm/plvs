@@ -96,7 +96,7 @@ public:
     cv::Mat GetDescriptor();
 
     void UpdateNormalAndDepth();
-    void UdateLength(); 
+    void UpdateLength(); 
 
     float GetMinDistanceInvariance();
     float GetMaxDistanceInvariance();

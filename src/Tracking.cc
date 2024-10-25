@@ -1361,8 +1361,8 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12,
                 // Scale start and end points
                 pML->SetWorldPosStart(pML->GetWorldPosStart() * invMedianDepth);
                 pML->SetWorldPosEnd(pML->GetWorldPosEnd() * invMedianDepth);
-                pML->ComputeAverageDirection();
                 pML->UpdateNormalAndDepth();
+                pML->UpdateLength();
             }
         }
     }

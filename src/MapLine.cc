@@ -41,7 +41,7 @@ MapLine::MapLine(const cv::Mat& p3DStart, const cv::Mat& p3DEnd,  Map* pMap, Key
 {
     p3DStart.copyTo(mWorldPosStart);
     p3DEnd.copyTo(mWorldPosEnd);
-    UdateLength();
+    UpdateLength();
     mNormalVector = cv::Mat::zeros(3,1,CV_32F);
 
     // MapLines can be created from Tracking and Local Mapping. This mutex avoid conflicts with id.
@@ -57,7 +57,7 @@ MapLine::MapLine(const cv::Mat& p3DStart, const cv::Mat& p3DEnd, Map* pMap, Fram
 {
     p3DStart.copyTo(mWorldPosStart);
     p3DEnd.copyTo(mWorldPosEnd);
-    UdateLength();
+    UpdateLength();
     cv::Mat p3DMiddle = 0.5*(mWorldPosStart+mWorldPosEnd);
 
     const cv::Mat Ow = pFrame->GetCameraCenter();
@@ -492,7 +492,7 @@ void MapLine::UpdateNormalAndDepth()
     if(observations.empty())
         return;
     
-    UdateLength();
+    UpdateLength();
 
     const cv::Mat p3DMiddle = 0.5*(p3DStart + p3DEnd);
     cv::Mat normal = cv::Mat::zeros(3,1,CV_32F);
@@ -534,7 +534,7 @@ void MapLine::UpdateNormalAndDepth()
     }
 }
 
-void MapLine::UdateLength()
+void MapLine::UpdateLength()
 {
     mfLength = cv::norm(mWorldPosStart - mWorldPosEnd);
 }
