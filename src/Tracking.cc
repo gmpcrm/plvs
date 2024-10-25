@@ -206,7 +206,7 @@ struct DefaultParameters {
 
 static DefaultParameters defaults;
 
-void SaveCameraParametersToFile(const std::string& fileName, cv::FileStorage& fSettings) {
+void SaveCameraParametersToFile(std::string& fileName, cv::FileStorage& fSettings) {
     std::ofstream outFile(fileName);
     if (!outFile.is_open()) {
         std::cerr << "Error: Cannot open file for writing: " << fileName << std::endl;
@@ -284,7 +284,7 @@ void SaveCameraParametersToFile(const std::string& fileName, cv::FileStorage& fS
     outFile.close();
 }
 
-void InitializeOutputFile(const cv::FileStorage& fSettings) {
+void InitializeOutputFile(cv::FileStorage& fSettings) {
     outputFileName = GenerateUniqueFileName("pose_and_frame_data_");
     SaveCameraParametersToFile(outputFileName, fSettings);
 }
