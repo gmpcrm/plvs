@@ -749,7 +749,7 @@ void Tracking::Track()
         if(mSensor==System::STEREO || mSensor==System::RGBD)
             StereoInitialization();
         else
-            MonocularInitialization(); /// < TODO: integrate line initialization ?
+            MonocularInitialization();
 
         mpFrameDrawer->Update(this);
 
@@ -1182,6 +1182,7 @@ void Tracking::MonocularInitialization()
 
             // Initialize
             mpInitializer = new Initializer(mCurrentFrame, 1.0, 200);
+            std::cout << "Initializer created. Features count: " << mCurrentFrame.N << std::endl;
             return;
         }
     }
@@ -1190,6 +1191,7 @@ void Tracking::MonocularInitialization()
         // Try to initialize
         if (mCurrentFrame.N <= kNumMinFeaturesMonoInitialization)
         {
+            std::cout << "Not enough features for initialization: " << mCurrentFrame.N << ". Deleting initializer." << std::endl;
             delete mpInitializer;
             mpInitializer = nullptr;
             return;
@@ -1208,9 +1210,13 @@ void Tracking::MonocularInitialization()
         std::vector<int> vMatches12;
         int nmatches = matcher.SearchForInitialization(mInitialFrame, mCurrentFrame, vbPrevMatched, vMatches12, 100);
 
+        // Log number of matches
+        std::cout << "Number of matches: " << nmatches << std::endl;
+
         // Check if there are enough correspondences
         if (nmatches < 100)
         {
+            std::cout << "Not enough matches for initialization. Deleting initializer." << std::endl;
             delete mpInitializer;
             mpInitializer = nullptr;
             return;
@@ -1225,6 +1231,7 @@ void Tracking::MonocularInitialization()
         if (mpInitializer->Initialize(mCurrentFrame, vMatches12, Rcw, tcw, vP3D, vbTriangulated))
         {
             // Set poses
+            std::cout << "Initialization successful." << std::endl;
             mInitialFrame.SetPose(cv::Mat::eye(4, 4, CV_32F));
             cv::Mat Tcw = cv::Mat::eye(4, 4, CV_32F);
             Rcw.copyTo(Tcw.rowRange(0, 3).colRange(0, 3));
@@ -1233,6 +1240,10 @@ void Tracking::MonocularInitialization()
 
             CreateInitialMapMonocular(vMatches12, vP3D, vbTriangulated);
         }
+        else
+        {
+            std::cout << "Initialization failed." << std::endl;
+        }
     }
 }
 
@@ -1240,7 +1251,9 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12,
                                         const std::vector<cv::Point3f>& vP3D,
                                         const std::vector<bool>& vbTriangulated)
 {
- // Create KeyFrames
+    std::cout << "Starting CreateInitialMapMonocular" << std::endl;
+
+    // Create KeyFrames
     KeyFramePtr pKFini = KeyFrameNewPtr(mInitialFrame, mpMap, mpKeyFrameDB);
     KeyFramePtr pKFcur = KeyFrameNewPtr(mCurrentFrame, mpMap, mpKeyFrameDB);
 
@@ -1252,6 +1265,7 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12,
     mpMap->AddKeyFrame(pKFcur);
 
     // Create MapPoints and associate them to keyframes
+    int nAddedMapPoints = 0;
     for (size_t i = 0; i < vMatches12.size(); i++)
     {
         if (vMatches12[i] < 0 || !vbTriangulated[i])
@@ -1271,7 +1285,10 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12,
         pNewMP->UpdateNormalAndDepth();
 
         mpMap->AddMapPoint(pNewMP);
+        nAddedMapPoints++;
     }
+
+    std::cout << "Added " << nAddedMapPoints << " MapPoints." << std::endl;
 
     // Initialize lines
     if (mbLineTrackerOn)
@@ -1280,6 +1297,7 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12,
         LineMatcher lineMatcher;
         std::vector<std::pair<size_t, size_t>> vLineMatches12;
         int nLineMatches = lineMatcher.SearchForTriangulation(pKFini, pKFcur, vLineMatches12, false);
+        std::cout << "Found " << nLineMatches << " line matches for triangulation." << std::endl;
 
         // Triangulate matched lines
         cv::Mat P1 = mK * pKFini->GetPose().rowRange(0, 3);
@@ -1288,6 +1306,7 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12,
         const std::vector<cv::line_descriptor_c::KeyLine>& keylinesIni = pKFini->mvKeyLinesUn;
         const std::vector<cv::line_descriptor_c::KeyLine>& keylinesCur = pKFcur->mvKeyLinesUn;
 
+        int nAddedMapLines = 0;
         for (size_t i = 0; i < vLineMatches12.size(); i++)
         {
             size_t idx1 = vLineMatches12[i].first;
@@ -1312,11 +1331,14 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12,
                 pNewML->UpdateLength();
 
                 mpMap->AddMapLine(pNewML);
+                nAddedMapLines++;
             }
         }
+        std::cout << "Added " << nAddedMapLines << " MapLines." << std::endl;
     }
 
     // Update connections
+    std::cout << "Updating connections between keyframes." << std::endl;
     pKFini->UpdateConnections();
     pKFcur->UpdateConnections();
 
@@ -1326,9 +1348,11 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12,
     // Scale initial baseline
     float medianDepth = pKFini->ComputeSceneMedianDepth(2);
     float invMedianDepth = 1.0f / medianDepth;
+    std::cout << "Median depth: " << medianDepth << ", Inverse: " << invMedianDepth << std::endl;
 
     if (medianDepth < 0 || pKFcur->TrackedMapPoints(1) < 80)
     {
+        std::cout << "Initialization failed due to low median depth or insufficient tracked map points." << std::endl;
         Reset();
         return;
     }
