@@ -110,7 +110,6 @@ namespace PLVS
 class Utils
 {
 public:
-
     template <typename T>
     static T const GetParam(cv::FileStorage& fileStorage, const std::string& nodename, T const& defaultVal, bool printOut = true)
     {

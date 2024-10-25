@@ -206,16 +206,6 @@ struct DefaultParameters {
 
 static DefaultParameters defaults;
 
-namespace Utils {
-    template <typename T>
-    T GetParamOrDefault(const cv::FileStorage& fSettings, const std::string& paramName, const T& defaultValue) {
-        if (fSettings[paramName].empty()) {
-            return defaultValue;
-        }
-        return (T)fSettings[paramName];
-    }
-}
-
 void SaveCameraParametersToFile(const std::string& fileName, const cv::FileStorage& fSettings, const DefaultParameters& defaults) {
     std::ofstream outFile(fileName);
     if (!outFile.is_open()) {
@@ -225,71 +215,71 @@ void SaveCameraParametersToFile(const std::string& fileName, const cv::FileStora
 
     outFile << "%YAML:1.0\n\n";
     outFile << "# Camera Parameters\n";
-    outFile << "Camera.fx: " << Utils::GetParamOrDefault(fSettings, "Camera.fx", defaults.camera_fx) << "\n";
-    outFile << "Camera.fy: " << Utils::GetParamOrDefault(fSettings, "Camera.fy", defaults.camera_fy) << "\n";
-    outFile << "Camera.cx: " << Utils::GetParamOrDefault(fSettings, "Camera.cx", defaults.camera_cx) << "\n";
-    outFile << "Camera.cy: " << Utils::GetParamOrDefault(fSettings, "Camera.cy", defaults.camera_cy) << "\n";
-    outFile << "Camera.k1: " << Utils::GetParamOrDefault(fSettings, "Camera.k1", defaults.camera_k1) << "\n";
-    outFile << "Camera.k2: " << Utils::GetParamOrDefault(fSettings, "Camera.k2", defaults.camera_k2) << "\n";
-    outFile << "Camera.p1: " << Utils::GetParamOrDefault(fSettings, "Camera.p1", defaults.camera_p1) << "\n";
-    outFile << "Camera.p2: " << Utils::GetParamOrDefault(fSettings, "Camera.p2", defaults.camera_p2) << "\n";
-    outFile << "Camera.k3: " << Utils::GetParamOrDefault(fSettings, "Camera.k3", defaults.camera_k3) << "\n";
-    outFile << "Camera.fps: " << Utils::GetParamOrDefault(fSettings, "Camera.fps", defaults.camera_fps) << "\n";
-    outFile << "Camera.RGB: " << Utils::GetParamOrDefault(fSettings, "Camera.RGB", defaults.camera_rgb) << "\n";
-    outFile << "Camera.width: " << Utils::GetParamOrDefault(fSettings, "Camera.width", defaults.camera_width) << "\n";
-    outFile << "Camera.height: " << Utils::GetParamOrDefault(fSettings, "Camera.height", defaults.camera_height) << "\n\n";
+    outFile << "Camera.fx: " << Utils::GetParam(fSettings, "Camera.fx", defaults.camera_fx) << "\n";
+    outFile << "Camera.fy: " << Utils::GetParam(fSettings, "Camera.fy", defaults.camera_fy) << "\n";
+    outFile << "Camera.cx: " << Utils::GetParam(fSettings, "Camera.cx", defaults.camera_cx) << "\n";
+    outFile << "Camera.cy: " << Utils::GetParam(fSettings, "Camera.cy", defaults.camera_cy) << "\n";
+    outFile << "Camera.k1: " << Utils::GetParam(fSettings, "Camera.k1", defaults.camera_k1) << "\n";
+    outFile << "Camera.k2: " << Utils::GetParam(fSettings, "Camera.k2", defaults.camera_k2) << "\n";
+    outFile << "Camera.p1: " << Utils::GetParam(fSettings, "Camera.p1", defaults.camera_p1) << "\n";
+    outFile << "Camera.p2: " << Utils::GetParam(fSettings, "Camera.p2", defaults.camera_p2) << "\n";
+    outFile << "Camera.k3: " << Utils::GetParam(fSettings, "Camera.k3", defaults.camera_k3) << "\n";
+    outFile << "Camera.fps: " << Utils::GetParam(fSettings, "Camera.fps", defaults.camera_fps) << "\n";
+    outFile << "Camera.RGB: " << Utils::GetParam(fSettings, "Camera.RGB", defaults.camera_rgb) << "\n";
+    outFile << "Camera.width: " << Utils::GetParam(fSettings, "Camera.width", defaults.camera_width) << "\n";
+    outFile << "Camera.height: " << Utils::GetParam(fSettings, "Camera.height", defaults.camera_height) << "\n\n";
 
     outFile << "# ORB Parameters\n";
-    outFile << "ORBextractor.nFeatures: " << Utils::GetParamOrDefault(fSettings, "ORBextractor.nFeatures", defaults.orb_nFeatures) << "\n";
-    outFile << "ORBextractor.scaleFactor: " << Utils::GetParamOrDefault(fSettings, "ORBextractor.scaleFactor", defaults.orb_scaleFactor) << "\n";
-    outFile << "ORBextractor.nLevels: " << Utils::GetParamOrDefault(fSettings, "ORBextractor.nLevels", defaults.orb_nLevels) << "\n";
-    outFile << "ORBextractor.iniThFAST: " << Utils::GetParamOrDefault(fSettings, "ORBextractor.iniThFAST", defaults.orb_iniThFAST) << "\n";
-    outFile << "ORBextractor.minThFAST: " << Utils::GetParamOrDefault(fSettings, "ORBextractor.minThFAST", defaults.orb_minThFAST) << "\n";
+    outFile << "ORBextractor.nFeatures: " << Utils::GetParam(fSettings, "ORBextractor.nFeatures", defaults.orb_nFeatures) << "\n";
+    outFile << "ORBextractor.scaleFactor: " << Utils::GetParam(fSettings, "ORBextractor.scaleFactor", defaults.orb_scaleFactor) << "\n";
+    outFile << "ORBextractor.nLevels: " << Utils::GetParam(fSettings, "ORBextractor.nLevels", defaults.orb_nLevels) << "\n";
+    outFile << "ORBextractor.iniThFAST: " << Utils::GetParam(fSettings, "ORBextractor.iniThFAST", defaults.orb_iniThFAST) << "\n";
+    outFile << "ORBextractor.minThFAST: " << Utils::GetParam(fSettings, "ORBextractor.minThFAST", defaults.orb_minThFAST) << "\n";
 
     outFile << "# Line Parameters\n";
-    outFile << "Line.on: " << Utils::GetParamOrDefault(fSettings, "Line.on", defaults.line_on) << "\n";
-    outFile << "Line.nfeatures: " << Utils::GetParamOrDefault(fSettings, "Line.nfeatures", defaults.line_nfeatures) << "\n";
-    outFile << "Line.pyramidPrecomputation: " << Utils::GetParamOrDefault(fSettings, "Line.pyramidPrecomputation", defaults.line_pyramidPrecomputation) << "\n";
-    outFile << "Line.nLevels: " << Utils::GetParamOrDefault(fSettings, "Line.nLevels", defaults.line_nLevels) << "\n";
-    outFile << "Line.scaleFactor: " << Utils::GetParamOrDefault(fSettings, "Line.scaleFactor", defaults.line_scaleFactor) << "\n";
-    outFile << "Line.sigma: " << Utils::GetParamOrDefault(fSettings, "Line.sigma", defaults.line_sigma) << "\n";
-    outFile << "Line.LSD.on: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.on", defaults.line_LSD_on) << "\n";
-    outFile << "Line.LSD.refine: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.refine", defaults.line_LSD_refine) << "\n";
-    outFile << "Line.LSD.sigmaScale: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.sigmaScale", defaults.line_LSD_sigmaScale) << "\n";
-    outFile << "Line.LSD.quant: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.quant", defaults.line_LSD_quant) << "\n";
-    outFile << "Line.LSD.angTh: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.angTh", defaults.line_LSD_angTh) << "\n";
-    outFile << "Line.LSD.logEps: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.logEps", defaults.line_LSD_logEps) << "\n";
-    outFile << "Line.LSD.densityTh: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.densityTh", defaults.line_LSD_densityTh) << "\n";
-    outFile << "Line.LSD.nbins: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.nbins", defaults.line_LSD_nbins) << "\n";
-    outFile << "Line.minLineLength: " << Utils::GetParamOrDefault(fSettings, "Line.minLineLength", defaults.line_minLineLength) << "\n";
-    outFile << "Line.lineTrackWeight: " << Utils::GetParamOrDefault(fSettings, "Line.lineTrackWeight", defaults.line_lineTrackWeight) << "\n\n";
+    outFile << "Line.on: " << Utils::GetParam(fSettings, "Line.on", defaults.line_on) << "\n";
+    outFile << "Line.nfeatures: " << Utils::GetParam(fSettings, "Line.nfeatures", defaults.line_nfeatures) << "\n";
+    outFile << "Line.pyramidPrecomputation: " << Utils::GetParam(fSettings, "Line.pyramidPrecomputation", defaults.line_pyramidPrecomputation) << "\n";
+    outFile << "Line.nLevels: " << Utils::GetParam(fSettings, "Line.nLevels", defaults.line_nLevels) << "\n";
+    outFile << "Line.scaleFactor: " << Utils::GetParam(fSettings, "Line.scaleFactor", defaults.line_scaleFactor) << "\n";
+    outFile << "Line.sigma: " << Utils::GetParam(fSettings, "Line.sigma", defaults.line_sigma) << "\n";
+    outFile << "Line.LSD.on: " << Utils::GetParam(fSettings, "Line.LSD.on", defaults.line_LSD_on) << "\n";
+    outFile << "Line.LSD.refine: " << Utils::GetParam(fSettings, "Line.LSD.refine", defaults.line_LSD_refine) << "\n";
+    outFile << "Line.LSD.sigmaScale: " << Utils::GetParam(fSettings, "Line.LSD.sigmaScale", defaults.line_LSD_sigmaScale) << "\n";
+    outFile << "Line.LSD.quant: " << Utils::GetParam(fSettings, "Line.LSD.quant", defaults.line_LSD_quant) << "\n";
+    outFile << "Line.LSD.angTh: " << Utils::GetParam(fSettings, "Line.LSD.angTh", defaults.line_LSD_angTh) << "\n";
+    outFile << "Line.LSD.logEps: " << Utils::GetParam(fSettings, "Line.LSD.logEps", defaults.line_LSD_logEps) << "\n";
+    outFile << "Line.LSD.densityTh: " << Utils::GetParam(fSettings, "Line.LSD.densityTh", defaults.line_LSD_densityTh) << "\n";
+    outFile << "Line.LSD.nbins: " << Utils::GetParam(fSettings, "Line.LSD.nbins", defaults.line_LSD_nbins) << "\n";
+    outFile << "Line.minLineLength: " << Utils::GetParam(fSettings, "Line.minLineLength", defaults.line_minLineLength) << "\n";
+    outFile << "Line.lineTrackWeight: " << Utils::GetParam(fSettings, "Line.lineTrackWeight", defaults.line_lineTrackWeight) << "\n\n";
 
     outFile << "# Viewer Parameters\n";
-    outFile << "Viewer.KeyFrameSize: " << Utils::GetParamOrDefault(fSettings, "Viewer.KeyFrameSize", defaults.viewer_KeyFrameSize) << "\n";
-    outFile << "Viewer.KeyFrameLineWidth: " << Utils::GetParamOrDefault(fSettings, "Viewer.KeyFrameLineWidth", defaults.viewer_KeyFrameLineWidth) << "\n";
-    outFile << "Viewer.GraphLineWidth: " << Utils::GetParamOrDefault(fSettings, "Viewer.GraphLineWidth", defaults.viewer_GraphLineWidth) << "\n";
-    outFile << "Viewer.PointSize: " << Utils::GetParamOrDefault(fSettings, "Viewer.PointSize", defaults.viewer_PointSize) << "\n";
-    outFile << "Viewer.CameraSize: " << Utils::GetParamOrDefault(fSettings, "Viewer.CameraSize", defaults.viewer_CameraSize) << "\n";
-    outFile << "Viewer.CameraLineWidth: " << Utils::GetParamOrDefault(fSettings, "Viewer.CameraLineWidth", defaults.viewer_CameraLineWidth) << "\n";
-    outFile << "Viewer.ViewpointX: " << Utils::GetParamOrDefault(fSettings, "Viewer.ViewpointX", defaults.viewer_ViewpointX) << "\n";
-    outFile << "Viewer.ViewpointY: " << Utils::GetParamOrDefault(fSettings, "Viewer.ViewpointY", defaults.viewer_ViewpointY) << "\n";
-    outFile << "Viewer.ViewpointZ: " << Utils::GetParamOrDefault(fSettings, "Viewer.ViewpointZ", defaults.viewer_ViewpointZ) << "\n";
-    outFile << "Viewer.ViewpointF: " << Utils::GetParamOrDefault(fSettings, "Viewer.ViewpointF", defaults.viewer_ViewpointF) << "\n";
+    outFile << "Viewer.KeyFrameSize: " << Utils::GetParam(fSettings, "Viewer.KeyFrameSize", defaults.viewer_KeyFrameSize) << "\n";
+    outFile << "Viewer.KeyFrameLineWidth: " << Utils::GetParam(fSettings, "Viewer.KeyFrameLineWidth", defaults.viewer_KeyFrameLineWidth) << "\n";
+    outFile << "Viewer.GraphLineWidth: " << Utils::GetParam(fSettings, "Viewer.GraphLineWidth", defaults.viewer_GraphLineWidth) << "\n";
+    outFile << "Viewer.PointSize: " << Utils::GetParam(fSettings, "Viewer.PointSize", defaults.viewer_PointSize) << "\n";
+    outFile << "Viewer.CameraSize: " << Utils::GetParam(fSettings, "Viewer.CameraSize", defaults.viewer_CameraSize) << "\n";
+    outFile << "Viewer.CameraLineWidth: " << Utils::GetParam(fSettings, "Viewer.CameraLineWidth", defaults.viewer_CameraLineWidth) << "\n";
+    outFile << "Viewer.ViewpointX: " << Utils::GetParam(fSettings, "Viewer.ViewpointX", defaults.viewer_ViewpointX) << "\n";
+    outFile << "Viewer.ViewpointY: " << Utils::GetParam(fSettings, "Viewer.ViewpointY", defaults.viewer_ViewpointY) << "\n";
+    outFile << "Viewer.ViewpointZ: " << Utils::GetParam(fSettings, "Viewer.ViewpointZ", defaults.viewer_ViewpointZ) << "\n";
+    outFile << "Viewer.ViewpointF: " << Utils::GetParam(fSettings, "Viewer.ViewpointF", defaults.viewer_ViewpointF) << "\n";
 
     outFile << "# Depth Filter Parameters\n";
-    outFile << "DepthFilter.Morphological.on: " << Utils::GetParamOrDefault(fSettings, "DepthFilter.Morphological.on", defaults.depthFilter_Morphological_on) << "\n";
-    outFile << "DepthFilter.Morphological.cutoff: " << Utils::GetParamOrDefault(fSettings, "DepthFilter.Morphological.cutoff", defaults.depthFilter_Morphological_cutoff) << "\n";
+    outFile << "DepthFilter.Morphological.on: " << Utils::GetParam(fSettings, "DepthFilter.Morphological.on", defaults.depthFilter_Morphological_on) << "\n";
+    outFile << "DepthFilter.Morphological.cutoff: " << Utils::GetParam(fSettings, "DepthFilter.Morphological.cutoff", defaults.depthFilter_Morphological_cutoff) << "\n";
     
     outFile << "# KeyFrame Parameters\n";
-    outFile << "KeyFrame.fovCentersBasedGeneration.on: " << Utils::GetParamOrDefault(fSettings, "KeyFrame.fovCentersBasedGeneration.on", defaults.keyframe_fovCentersBasedGeneration_on) << "\n";
-    outFile << "KeyFrame.maxFovCentersDistance: " << Utils::GetParamOrDefault(fSettings, "KeyFrame.maxFovCentersDistance", defaults.keyframe_maxFovCentersDistance) << "\n";
+    outFile << "KeyFrame.fovCentersBasedGeneration.on: " << Utils::GetParam(fSettings, "KeyFrame.fovCentersBasedGeneration.on", defaults.keyframe_fovCentersBasedGeneration_on) << "\n";
+    outFile << "KeyFrame.maxFovCentersDistance: " << Utils::GetParam(fSettings, "KeyFrame.maxFovCentersDistance", defaults.keyframe_maxFovCentersDistance) << "\n";
 
     outFile << "# Map Object Parameters\n";
-    outFile << "MapObject.on: " << Utils::GetParamOrDefault(fSettings, "MapObject.on", defaults.mapObject_on) << "\n";
-    outFile << "MapObject.matchRatio: " << Utils::GetParamOrDefault(fSettings, "MapObject.matchRatio", defaults.mapObject_matchRatio) << "\n";
-    outFile << "MapObject.numMinInliers: " << Utils::GetParamOrDefault(fSettings, "MapObject.numMinInliers", defaults.mapObject_numMinInliers) << "\n";
-    outFile << "MapObject.maxReprojectionError: " << Utils::GetParamOrDefault(fSettings, "MapObject.maxReprojectionError", defaults.mapObject_maxReprojectionError) << "\n";
-    outFile << "MapObject.maxSim3Error: " << Utils::GetParamOrDefault(fSettings, "MapObject.maxSim3Error", defaults.mapObject_maxSim3Error) << "\n";
+    outFile << "MapObject.on: " << Utils::GetParam(fSettings, "MapObject.on", defaults.mapObject_on) << "\n";
+    outFile << "MapObject.matchRatio: " << Utils::GetParam(fSettings, "MapObject.matchRatio", defaults.mapObject_matchRatio) << "\n";
+    outFile << "MapObject.numMinInliers: " << Utils::GetParam(fSettings, "MapObject.numMinInliers", defaults.mapObject_numMinInliers) << "\n";
+    outFile << "MapObject.maxReprojectionError: " << Utils::GetParam(fSettings, "MapObject.maxReprojectionError", defaults.mapObject_maxReprojectionError) << "\n";
+    outFile << "MapObject.maxSim3Error: " << Utils::GetParam(fSettings, "MapObject.maxSim3Error", defaults.mapObject_maxSim3Error) << "\n";
 
     outFile.close();
 }
