@@ -13,6 +13,7 @@ set(WITH_LIBELAS    OFF  CACHE BOOL "Add libelas support")  # for stereo dense r
 set(WITH_LIBSGM     OFF  CACHE BOOL "Add stereo libsgm support")  # for stereo dense reconstruction (it needs CUDA)
 set(WITH_OPENMP     ON  CACHE BOOL "Add OpenMP support") # useful for PCL (since we use the macro PCL_NO_PRECOMPILE!)
 set(WITH_CUDA       OFF CACHE BOOL "Add CUDA support")
+set(USE_CUDA        OFF CACHE BOOL "Added CUDA support")
 
 #====================================
 # c++ standard 
