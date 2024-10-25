@@ -30,7 +30,7 @@
 
 #include <unordered_set>
 
-#define VERBOSE 0
+#define VERBOSE 1
 
 #define LOG_SEARCHES 0
 
@@ -191,7 +191,7 @@ int LineMatcher::SearchByKnn(KeyFramePtr& pKF, const Frame &F, std::vector<MapLi
         const cv::DMatch& match = lmatches[jj][0]; // get first match from knn search 
         if( (vpMapLinesKF[match.queryIdx]) && (match.distance <= TH_LOW) )
         {
-            //std::cout << "match distance : " << match.distance << std::endl; 
+            std::cout << "match distance : " << match.distance << std::endl; 
             if( !vbMatched[match.trainIdx] )
             {
                 vbMatched[match.trainIdx] = true;
@@ -462,7 +462,7 @@ int LineMatcher::SearchStereoMatchesByKnn(Frame &frame, std::vector<cv::DMatch>&
                 if( oldMatch.distance > match.distance )
                 {
                     // replace with better match 
-                    //std::cout << "replacing with better match " << std::endl; 
+                    std::cout << "replacing with better match " << std::endl; 
                     oldMatch = match; 
 
                     if(mbCheckOrientation)
@@ -581,7 +581,8 @@ int LineMatcher::SearchForTriangulation(KeyFramePtr& pKF1, KeyFramePtr& pKF2, ve
         queryMask.at<uchar>(idx1)=1;
         numLinesToMatchInKF++;
     }
-    //std::cout << "num lines to match: " << numLinesToMatchInKF << std::endl; 
+    
+    std::cout << "num lines to match: " << numLinesToMatchInKF << std::endl; 
     if(numLinesToMatchInKF == 0) return 0; 
     
     std::vector<std::vector<cv::DMatch>> lmatches;
@@ -590,7 +591,7 @@ int LineMatcher::SearchForTriangulation(KeyFramePtr& pKF1, KeyFramePtr& pKF2, ve
     std::vector<std::pair<int,list<int>::iterator>> vRotHistPairsBinIdxMatchIter(pKF2->Nlines,std::make_pair(-1,list<int>::iterator(0)));             
             
     int numValidMatches = ComputeDescriptorMatches(ldesc_q, ldesc_t, queryMask, lmatches , vValidMatch);
-    //std::cout << "num valid matches: " << numValidMatches << std::endl; 
+    std::cout << "num valid line matches: " << numValidMatches << std::endl; 
     
     nmatches = 0; 
     for(size_t jj=0,jjEnd=lmatches.size(); jj<jjEnd; jj++)

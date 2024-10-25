@@ -289,15 +289,22 @@ void InitializeOutputFile(cv::FileStorage& fSettings) {
     SaveCameraParametersToFile(outputFileName, fSettings);
 }
 
+#include <iomanip>
+#include <sstream>
+#include <string>
+
 // Функция для формирования данных в строковом виде
 std::string FormatFrameData(int frameId, double timeStamp, const cv::Mat& Tcw) {
     std::ostringstream oss;
     oss << "Frame ID: " << frameId << std::endl;
-    oss << "Timestamp: " << timeStamp << std::endl;
+    oss << "Timestamp: " << std::fixed << std::setprecision(5) << timeStamp << std::endl;
+    oss.unsetf(std::ios::fixed);
     oss << "Pose (Tcw): " << Tcw << std::endl;
     oss << "-------------------------" << std::endl;
+
     return oss.str();
 }
+
 
 // Функция для записи данных текущего кадра
 void SaveFrameData(int frameId, double timeStamp, const cv::Mat& Tcw) {
