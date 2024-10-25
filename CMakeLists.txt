@@ -7,10 +7,10 @@ project(plvs)
 set(CPP_STANDARD_VERSION "17" CACHE STRING "Desired C++ standard version") # we need c++17 since nvcc does not support c++20 (probably we can try mixing standards and let nvcc use c++17 ... not sure about the result)
 set(OPENCV_VERSION "4" CACHE STRING "Desired OpenCV version") # this is the first target version that is searched for 
 
-set(WITH_FASTFUSION ON  CACHE BOOL  "Add fastfusion support") # for enabling RGBD dense reconstruction via fastfusion (it needs Intel SIMD)
+set(WITH_FASTFUSION OFF  CACHE BOOL  "Add fastfusion support") # for enabling RGBD dense reconstruction via fastfusion (it needs Intel SIMD)
 set(WITH_G2O_NEW    OFF CACHE BOOL "Add g2o new support") # for using the new version of g2o with Cholmod and Csparse solvers (and more...)
-set(WITH_LIBELAS    ON  CACHE BOOL "Add libelas support")  # for stereo dense reconstruction (it needs Intel SIMD, optionally can be compiled with CUDA)
-set(WITH_LIBSGM     ON  CACHE BOOL "Add stereo libsgm support")  # for stereo dense reconstruction (it needs CUDA)
+set(WITH_LIBELAS    OFF  CACHE BOOL "Add libelas support")  # for stereo dense reconstruction (it needs Intel SIMD, optionally can be compiled with CUDA)
+set(WITH_LIBSGM     OFF  CACHE BOOL "Add stereo libsgm support")  # for stereo dense reconstruction (it needs CUDA)
 set(WITH_OPENMP     ON  CACHE BOOL "Add OpenMP support") # useful for PCL (since we use the macro PCL_NO_PRECOMPILE!)
 set(WITH_CUDA       OFF CACHE BOOL "Add CUDA support")
 
@@ -253,7 +253,7 @@ endif()
 
 
 if(WITH_LIBELAS)
-    if(NOT CUDA_FOUND)
+    if(WITH_CUDA AND NOT CUDA_FOUND)
         find_package(CUDA) # make the check if not already done above (CUDA are required if libelas )
     endif()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_LIBELAS")
@@ -275,7 +275,7 @@ endif()
 
 
 if(WITH_LIBSGM)
-    if(NOT CUDA_FOUND)
+    if(WITH_CUDA AND NOT CUDA_FOUND)
         find_package(CUDA REQUIRED) # make the check if not already done above
     endif()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_LIBSGM")
