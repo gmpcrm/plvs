@@ -279,7 +279,7 @@ void SaveCameraParametersToFile(const std::string& fileName, cv::FileStorage& fS
     outFile << "MapObject.matchRatio: " << Utils::GetParam(fSettings, "MapObject.matchRatio", defaults.mapObject_matchRatio) << endl;
     outFile << "MapObject.numMinInliers: " << Utils::GetParam(fSettings, "MapObject.numMinInliers", defaults.mapObject_numMinInliers) << endl;
     outFile << "MapObject.maxReprojectionError: " << Utils::GetParam(fSettings, "MapObject.maxReprojectionError", defaults.mapObject_maxReprojectionError) << endl;
-    outFile << "MapObject.maxSim3Error: " << Utils::GetParam(fSettings, "MapObject.maxSim3Error", defaults.mapObject_maxSim3Error) << endl < endl << endl;
+    outFile << "MapObject.maxSim3Error: " << Utils::GetParam(fSettings, "MapObject.maxSim3Error", defaults.mapObject_maxSim3Error) << endl << endl << endl;
 
     outFile.close();
 }
