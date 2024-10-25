@@ -1240,7 +1240,7 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12,
                                         const std::vector<cv::Point3f>& vP3D,
                                         const std::vector<bool>& vbTriangulated)
 {
-    // Create KeyFrames
+ // Create KeyFrames
     KeyFramePtr pKFini = KeyFrameNewPtr(mInitialFrame, mpMap, mpKeyFrameDB);
     KeyFramePtr pKFcur = KeyFrameNewPtr(mCurrentFrame, mpMap, mpKeyFrameDB);
 
@@ -1276,22 +1276,25 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12,
     // Initialize lines
     if (mbLineTrackerOn)
     {
-        // Line matching between initial frames
+        // Line matching between initial keyframes
         LineMatcher lineMatcher;
         std::vector<std::pair<size_t, size_t>> vLineMatches12;
-        int nLineMatches = lineMatcher.SearchForTriangulation(mInitialFrame, mCurrentFrame, vLineMatches12);
+        int nLineMatches = lineMatcher.SearchForTriangulation(pKFini, pKFcur, vLineMatches12, false);
 
         // Triangulate matched lines
         cv::Mat P1 = mK * pKFini->GetPose().rowRange(0, 3);
         cv::Mat P2 = mK * pKFcur->GetPose().rowRange(0, 3);
+
+        const std::vector<cv::line_descriptor_c::KeyLine>& keylinesIni = pKFini->mvKeyLinesUn;
+        const std::vector<cv::line_descriptor_c::KeyLine>& keylinesCur = pKFcur->mvKeyLinesUn;
 
         for (size_t i = 0; i < vLineMatches12.size(); i++)
         {
             size_t idx1 = vLineMatches12[i].first;
             size_t idx2 = vLineMatches12[i].second;
 
-            const cv::line_descriptor_c::KeyLine &kl1 = mInitialFrame.mvKeyLinesUn[idx1];
-            const cv::line_descriptor_c::KeyLine &kl2 = mCurrentFrame.mvKeyLinesUn[idx2];
+            const cv::line_descriptor_c::KeyLine &kl1 = keylinesIni[idx1];
+            const cv::line_descriptor_c::KeyLine &kl2 = keylinesCur[idx2];
 
             cv::Mat x3Ds, x3De;
             if (TriangulateLine(kl1, kl2, P1, P2, x3Ds, x3De))
@@ -1305,8 +1308,8 @@ void Tracking::CreateInitialMapMonocular(const std::vector<int>& vMatches12,
                 pKFcur->AddMapLine(pNewML, idx2);
 
                 pNewML->ComputeDistinctiveDescriptors();
-                pNewML->ComputeAverageDirection();
                 pNewML->UpdateNormalAndDepth();
+                pNewML->UpdateLength();
 
                 mpMap->AddMapLine(pNewML);
             }
