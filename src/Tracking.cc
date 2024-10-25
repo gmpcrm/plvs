@@ -39,7 +39,7 @@
 
 
 #include<iostream>
-
+#include<filesystem> 
 #include<mutex>
 
 #include<opencv2/core/core.hpp>
@@ -72,6 +72,7 @@
 #define USE_LINE_MATCHING_BY_KNN 0       // just for testing how search-by-projection is better w.r.t. KNN-based search 
 
 using namespace std;
+namespace fs = std::filesystem;
 
 namespace PLVS
 {
@@ -113,6 +114,206 @@ std::vector<std::string> Tracking::vTrackingStateStrings = {
     "RELOCALIZE_IN_LOADED_MAP"
 }; // must be kept in sync with eTrackingState
 
+std::string outputFileName;
+
+std::string GenerateUniqueFileName(const std::string& baseName) {
+    int index = 1;
+    std::string fileName;
+    do {
+        std::ostringstream oss;
+        oss << baseName << std::setw(4) << std::setfill('0') << index << ".txt";
+        fileName = oss.str();
+        index++;
+    } while (fs::exists(fileName));
+    return fileName;
+}
+
+struct DefaultParameters {
+    // Camera parameters
+    float camera_fx = 597.4627f;
+    float camera_fy = 534.1414f;
+    float camera_cx = 367.3463f;
+    float camera_cy = 218.1773f;
+    float camera_k1 = -0.4355f;
+    float camera_k2 = 0.1922f;
+    float camera_p1 = -0.00137f;
+    float camera_p2 = 0.00018f;
+    float camera_k3 = 0.0f;
+    float camera_fps = 30.0f;
+    int camera_rgb = 1;
+    int camera_width = 720;
+    int camera_height = 480;
+    float camera_bf = 40.0f; // Зависит от конкретной камеры, стоит проверить
+
+    // ORB extractor parameters
+    int orb_nFeatures = 5000;
+    float orb_scaleFactor = 1.1f;
+    int orb_nLevels = 10;
+    int orb_iniThFAST = 12;
+    int orb_minThFAST = 8;
+
+    // Line extractor parameters
+    int line_on = 1;
+    int line_nfeatures = 60;
+    bool line_pyramidPrecomputation = false;
+    int line_nLevels = 8; // Количество уровней в пирамиде
+    float line_scaleFactor = 1.2f;
+    float line_sigma = 0.8f;
+    bool line_LSD_on = true;
+    int line_LSD_refine = 1;
+    float line_LSD_sigmaScale = 0.6f;
+    float line_LSD_quant = 2.0f;
+    float line_LSD_angTh = 22.5f;
+    float line_LSD_logEps = 1.0f;
+    float line_LSD_densityTh = 0.6f;
+    int line_LSD_nbins = 1024;
+    float line_minLineLength = 0.025f;
+    float line_lineTrackWeight = 2.0f;
+
+    // Viewer parameters
+    float viewer_KeyFrameSize = 0.05f;
+    float viewer_KeyFrameLineWidth = 1.0f;
+    float viewer_GraphLineWidth = 0.9f;
+    float viewer_PointSize = 2.0f;
+    float viewer_CameraSize = 0.08f;
+    float viewer_CameraLineWidth = 3.0f;
+    float viewer_ViewpointX = 0.0f;
+    float viewer_ViewpointY = -0.7f;
+    float viewer_ViewpointZ = -1.8f;
+    float viewer_ViewpointF = 500.0f;
+
+    // Initialization parameters
+    int initialization_numMinFeaturesRGBD = 500;
+    int initialization_numMinFeaturesStereo = 500;
+    int initialization_numMinFeaturesMono = 100;
+
+    // Depth model parameters
+    float depth_sigmaZFactor = 0.001f;
+    int depthFilter_Morphological_on = 0;
+    float depthFilter_Morphological_cutoff = 20.0f;
+
+    // Keyframe generation parameters
+    bool keyframe_fovCentersBasedGeneration_on = false;
+    float keyframe_maxFovCentersDistance = 0.5f;
+
+    // Map object parameters
+    int mapObject_on = 0;
+    float mapObject_matchRatio = 0.7f;
+    int mapObject_numMinInliers = 20;
+    float mapObject_maxReprojectionError = 5.0f;
+    float mapObject_maxSim3Error = 1.0f;
+};
+
+static DefaultParameters defaults;
+
+void SaveCameraParametersToFile(const std::string& fileName, const cv::FileStorage& fSettings, const DefaultParameters& defaults) {
+    std::ofstream outFile(fileName);
+    if (!outFile.is_open()) {
+        std::cerr << "Error: Cannot open file for writing: " << fileName << std::endl;
+        return;
+    }
+
+    outFile << "%YAML:1.0\n\n";
+    outFile << "# Camera Parameters\n";
+    outFile << "Camera.fx: " << Utils::GetParamOrDefault(fSettings, "Camera.fx", defaults.camera_fx) << "\n";
+    outFile << "Camera.fy: " << Utils::GetParamOrDefault(fSettings, "Camera.fy", defaults.camera_fy) << "\n";
+    outFile << "Camera.cx: " << Utils::GetParamOrDefault(fSettings, "Camera.cx", defaults.camera_cx) << "\n";
+    outFile << "Camera.cy: " << Utils::GetParamOrDefault(fSettings, "Camera.cy", defaults.camera_cy) << "\n";
+    outFile << "Camera.k1: " << Utils::GetParamOrDefault(fSettings, "Camera.k1", defaults.camera_k1) << "\n";
+    outFile << "Camera.k2: " << Utils::GetParamOrDefault(fSettings, "Camera.k2", defaults.camera_k2) << "\n";
+    outFile << "Camera.p1: " << Utils::GetParamOrDefault(fSettings, "Camera.p1", defaults.camera_p1) << "\n";
+    outFile << "Camera.p2: " << Utils::GetParamOrDefault(fSettings, "Camera.p2", defaults.camera_p2) << "\n";
+    outFile << "Camera.k3: " << Utils::GetParamOrDefault(fSettings, "Camera.k3", defaults.camera_k3) << "\n";
+    outFile << "Camera.fps: " << Utils::GetParamOrDefault(fSettings, "Camera.fps", defaults.camera_fps) << "\n";
+    outFile << "Camera.RGB: " << Utils::GetParamOrDefault(fSettings, "Camera.RGB", defaults.camera_rgb) << "\n";
+    outFile << "Camera.width: " << Utils::GetParamOrDefault(fSettings, "Camera.width", defaults.camera_width) << "\n";
+    outFile << "Camera.height: " << Utils::GetParamOrDefault(fSettings, "Camera.height", defaults.camera_height) << "\n\n";
+
+    outFile << "# ORB Parameters\n";
+    outFile << "ORBextractor.nFeatures: " << Utils::GetParamOrDefault(fSettings, "ORBextractor.nFeatures", defaults.orb_nFeatures) << "\n";
+    outFile << "ORBextractor.scaleFactor: " << Utils::GetParamOrDefault(fSettings, "ORBextractor.scaleFactor", defaults.orb_scaleFactor) << "\n";
+    outFile << "ORBextractor.nLevels: " << Utils::GetParamOrDefault(fSettings, "ORBextractor.nLevels", defaults.orb_nLevels) << "\n";
+    outFile << "ORBextractor.iniThFAST: " << Utils::GetParamOrDefault(fSettings, "ORBextractor.iniThFAST", defaults.orb_iniThFAST) << "\n";
+    outFile << "ORBextractor.minThFAST: " << Utils::GetParamOrDefault(fSettings, "ORBextractor.minThFAST", defaults.orb_minThFAST) << "\n";
+
+    outFile << "# Line Parameters\n";
+    outFile << "Line.on: " << Utils::GetParamOrDefault(fSettings, "Line.on", defaults.line_on) << "\n";
+    outFile << "Line.nfeatures: " << Utils::GetParamOrDefault(fSettings, "Line.nfeatures", defaults.line_nfeatures) << "\n";
+    outFile << "Line.pyramidPrecomputation: " << Utils::GetParamOrDefault(fSettings, "Line.pyramidPrecomputation", defaults.line_pyramidPrecomputation) << "\n";
+    outFile << "Line.nLevels: " << Utils::GetParamOrDefault(fSettings, "Line.nLevels", defaults.line_nLevels) << "\n";
+    outFile << "Line.scaleFactor: " << Utils::GetParamOrDefault(fSettings, "Line.scaleFactor", defaults.line_scaleFactor) << "\n";
+    outFile << "Line.sigma: " << Utils::GetParamOrDefault(fSettings, "Line.sigma", defaults.line_sigma) << "\n";
+    outFile << "Line.LSD.on: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.on", defaults.line_LSD_on) << "\n";
+    outFile << "Line.LSD.refine: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.refine", defaults.line_LSD_refine) << "\n";
+    outFile << "Line.LSD.sigmaScale: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.sigmaScale", defaults.line_LSD_sigmaScale) << "\n";
+    outFile << "Line.LSD.quant: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.quant", defaults.line_LSD_quant) << "\n";
+    outFile << "Line.LSD.angTh: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.angTh", defaults.line_LSD_angTh) << "\n";
+    outFile << "Line.LSD.logEps: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.logEps", defaults.line_LSD_logEps) << "\n";
+    outFile << "Line.LSD.densityTh: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.densityTh", defaults.line_LSD_densityTh) << "\n";
+    outFile << "Line.LSD.nbins: " << Utils::GetParamOrDefault(fSettings, "Line.LSD.nbins", defaults.line_LSD_nbins) << "\n";
+    outFile << "Line.minLineLength: " << Utils::GetParamOrDefault(fSettings, "Line.minLineLength", defaults.line_minLineLength) << "\n";
+    outFile << "Line.lineTrackWeight: " << Utils::GetParamOrDefault(fSettings, "Line.lineTrackWeight", defaults.line_lineTrackWeight) << "\n\n";
+
+    outFile << "# Viewer Parameters\n";
+    outFile << "Viewer.KeyFrameSize: " << Utils::GetParamOrDefault(fSettings, "Viewer.KeyFrameSize", defaults.viewer_KeyFrameSize) << "\n";
+    outFile << "Viewer.KeyFrameLineWidth: " << Utils::GetParamOrDefault(fSettings, "Viewer.KeyFrameLineWidth", defaults.viewer_KeyFrameLineWidth) << "\n";
+    outFile << "Viewer.GraphLineWidth: " << Utils::GetParamOrDefault(fSettings, "Viewer.GraphLineWidth", defaults.viewer_GraphLineWidth) << "\n";
+    outFile << "Viewer.PointSize: " << Utils::GetParamOrDefault(fSettings, "Viewer.PointSize", defaults.viewer_PointSize) << "\n";
+    outFile << "Viewer.CameraSize: " << Utils::GetParamOrDefault(fSettings, "Viewer.CameraSize", defaults.viewer_CameraSize) << "\n";
+    outFile << "Viewer.CameraLineWidth: " << Utils::GetParamOrDefault(fSettings, "Viewer.CameraLineWidth", defaults.viewer_CameraLineWidth) << "\n";
+    outFile << "Viewer.ViewpointX: " << Utils::GetParamOrDefault(fSettings, "Viewer.ViewpointX", defaults.viewer_ViewpointX) << "\n";
+    outFile << "Viewer.ViewpointY: " << Utils::GetParamOrDefault(fSettings, "Viewer.ViewpointY", defaults.viewer_ViewpointY) << "\n";
+    outFile << "Viewer.ViewpointZ: " << Utils::GetParamOrDefault(fSettings, "Viewer.ViewpointZ", defaults.viewer_ViewpointZ) << "\n";
+    outFile << "Viewer.ViewpointF: " << Utils::GetParamOrDefault(fSettings, "Viewer.ViewpointF", defaults.viewer_ViewpointF) << "\n";
+
+    outFile << "# Depth Filter Parameters\n";
+    outFile << "DepthFilter.Morphological.on: " << Utils::GetParamOrDefault(fSettings, "DepthFilter.Morphological.on", defaults.depthFilter_Morphological_on) << "\n";
+    outFile << "DepthFilter.Morphological.cutoff: " << Utils::GetParamOrDefault(fSettings, "DepthFilter.Morphological.cutoff", defaults.depthFilter_Morphological_cutoff) << "\n";
+    
+    outFile << "# KeyFrame Parameters\n";
+    outFile << "KeyFrame.fovCentersBasedGeneration.on: " << Utils::GetParamOrDefault(fSettings, "KeyFrame.fovCentersBasedGeneration.on", defaults.keyframe_fovCentersBasedGeneration_on) << "\n";
+    outFile << "KeyFrame.maxFovCentersDistance: " << Utils::GetParamOrDefault(fSettings, "KeyFrame.maxFovCentersDistance", defaults.keyframe_maxFovCentersDistance) << "\n";
+
+    outFile << "# Map Object Parameters\n";
+    outFile << "MapObject.on: " << Utils::GetParamOrDefault(fSettings, "MapObject.on", defaults.mapObject_on) << "\n";
+    outFile << "MapObject.matchRatio: " << Utils::GetParamOrDefault(fSettings, "MapObject.matchRatio", defaults.mapObject_matchRatio) << "\n";
+    outFile << "MapObject.numMinInliers: " << Utils::GetParamOrDefault(fSettings, "MapObject.numMinInliers", defaults.mapObject_numMinInliers) << "\n";
+    outFile << "MapObject.maxReprojectionError: " << Utils::GetParamOrDefault(fSettings, "MapObject.maxReprojectionError", defaults.mapObject_maxReprojectionError) << "\n";
+    outFile << "MapObject.maxSim3Error: " << Utils::GetParamOrDefault(fSettings, "MapObject.maxSim3Error", defaults.mapObject_maxSim3Error) << "\n";
+
+    outFile.close();
+}
+
+void InitializeOutputFile(const cv::FileStorage& fSettings) {
+    outputFileName = GenerateUniqueFileName("pose_and_frame_data_");
+    SaveCameraParametersToFile(outputFileName, fSettings);
+}
+
+// Функция для формирования данных в строковом виде
+std::string FormatFrameData(int frameId, double timeStamp, const cv::Mat& Tcw) {
+    std::ostringstream oss;
+    oss << "Frame ID: " << frameId << std::endl;
+    oss << "Timestamp: " << timeStamp << std::endl;
+    oss << "Pose (Tcw): " << Tcw << std::endl;
+    oss << "-------------------------" << std::endl;
+    return oss.str();
+}
+
+// Функция для записи данных текущего кадра
+void SaveFrameData(int frameId, double timeStamp, const cv::Mat& Tcw) {
+    std::string frameData = FormatFrameData(frameId, timeStamp, Tcw);
+
+    // Запись в файл
+    std::ofstream outFile(outputFileName, std::ios::app);
+    if (outFile.is_open()) {
+        outFile << frameData;
+        outFile.close();
+    }
+
+    // Вывод на экран
+    std::cout << frameData;
+}
+
 Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor):
     mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
     mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer*>(NULL)), mpSystem(pSys), mpViewer(NULL),
@@ -121,6 +322,8 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     // Load camera parameters from settings file
 
     cv::FileStorage fSettings(strSettingPath, cv::FileStorage::READ);
+    InitializeOutputFile(fSettings);
+
     float fx = fSettings["Camera.fx"];
     float fy = fSettings["Camera.fy"];
     float cx = fSettings["Camera.cx"];
@@ -840,6 +1043,8 @@ void Tracking::Track()
 
         mLastFrame = Frame(mCurrentFrame);
     }
+
+    SaveFrameData(mCurrentFrame.mnId, mCurrentFrame.mTimeStamp, mCurrentFrame.mTcw);
 
     // Store frame pose information to retrieve the complete camera trajectory afterwards.
     if(!mCurrentFrame.mTcw.empty())
