@@ -36,9 +36,9 @@
 
 #define USE_DISTSEGMENT2SEGMENT_FOR_MATCHING 0 
 
-#define USE_STEREO_PROJECTION_CHECK 1
+#define USE_STEREO_PROJECTION_CHECK 0
 
-#define USE_REPLACE_WITH_BETTER_IN_STEREO_MATCHING 1
+#define USE_REPLACE_WITH_BETTER_IN_STEREO_MATCHING 0
 
 #define USE_MAD12 1
 
@@ -767,10 +767,14 @@ int LineMatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame,
             
     for(int i=0; i<LastFrame.Nlines; i++)
     {
+        std::cout << "Processing line: " << i << " in LastFrame with bMono: " << bMono << std::endl;
+
         MapLinePtr pML = LastFrame.mvpMapLines[i];
 
         if(pML)
         {
+            std::cout << "Line " << i << " is valid for matching." << std::endl;
+                        
             if(!LastFrame.mvbLineOutlier[i]) 
             {
             //     Project
@@ -794,8 +798,12 @@ int LineMatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame,
                 
                 // project line to current frame 
                 if(!proj.ProjectLineWithCheck(Rcw, tcw, pML, CurrentFrame))
+                {
+                    std::cout << "Projection check failed for line: " << i << std::endl;
                     continue;
+                }
 
+                std::cout << "Projection succeeded for line: " << i << std::endl;
                 int nLastOctave = LastFrame.mvKeyLinesUn[i].octave;
 
             //    // Search in a window. Size depends on scale
@@ -993,6 +1001,7 @@ int LineMatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame,
 #if VERBOSE    
     std::cout << "LineMatcher::MatchByProjection() F-F - matched " << nmatches << " lines" << std::endl;    
 #endif
+
     return nmatches;
 }
 
