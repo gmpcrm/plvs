@@ -34,7 +34,7 @@ if [[ ! -f install/lib/libpcl_common.so ]]; then
     PCL_OPTIONS="-DWITH_CUDA=FALSE" 
     echo "compiling with options: $PCL_OPTIONS $EXTERNAL_OPTION" 
     cmake .. -DCMAKE_INSTALL_PREFIX="`pwd`/../install" -DCMAKE_BUILD_TYPE=Release $PCL_OPTIONS $EXTERNAL_OPTION
-	make -j 1
+	make -j$(nproc)
     make install 
 fi 
 cd $SCRIPT_DIR

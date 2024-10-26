@@ -21,5 +21,5 @@ cd build
 ccache -M 50G
 ccache -s
 cmake -DCXX11=On -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DOPENMP=Off ..
-make -j3
+make -j$(nproc)
 sudo make install
