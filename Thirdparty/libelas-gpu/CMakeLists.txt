@@ -5,6 +5,7 @@ set(CPP_STANDARD_VERSION "17" CACHE STRING "Desired C++ standard version") # nee
 set(WITH_GPU OFF CACHE BOOL "Added GPU support")
 set(USE_CUDA OFF CACHE BOOL "Added CUDA support")
 
+
 IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release)
 ENDIF()
