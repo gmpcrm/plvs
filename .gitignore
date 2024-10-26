@@ -141,3 +141,5 @@ Results/
 *.exe
 *.out
 *.app
+Thirdparty/g2o_new
+Thirdparty/g2o_new
