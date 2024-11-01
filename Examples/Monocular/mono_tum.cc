@@ -32,6 +32,7 @@
 #include <../../../include/PointDefinitions.h>
 
 #include<System.h>
+#include<Utils.h>
 
 using namespace std;
 
@@ -54,8 +55,11 @@ int main(int argc, char **argv)
 
     int nImages = vstrImageFilenames.size();
 
+    cv::FileStorage fSettings(argv[2], cv::FileStorage::READ);
+    bool bUseViewer = static_cast<int> (PLVS::Utils::GetParam(fSettings, "Viewer.on", 1)) != 0;
+
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    PLVS::System SLAM(argv[1],argv[2],PLVS::System::MONOCULAR,true);
+    PLVS::System SLAM(argv[1],argv[2],PLVS::System::MONOCULAR,bUseViewer);
 
     // Vector for tracking time statistics
     vector<float> vTimesTrack;

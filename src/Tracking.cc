@@ -38,12 +38,16 @@
 
 
 
-#include<iostream>
+#include <iostream>
 
-#include<mutex>
+#include <fstream>
+#include <filesystem>
+#include <iomanip>
+#include <sstream>
+#include <mutex>
 
-#include<opencv2/core/core.hpp>
-#include<opencv2/features2d/features2d.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/features2d/features2d.hpp>
 
 #ifdef USE_CUDA
 #include <opencv2/cudaarithm.hpp>
@@ -113,6 +117,204 @@ std::vector<std::string> Tracking::vTrackingStateStrings = {
     "RELOCALIZE_IN_LOADED_MAP"
 }; // must be kept in sync with eTrackingState
 
+namespace fs = std::filesystem;
+std::string outputFileName;
+
+// Function to generate a unique file name
+std::string GenerateUniqueFileName(const std::string& baseName) {
+    int index = 1;
+    std::string fileName;
+    do {
+        std::ostringstream oss;
+        oss << baseName << std::setw(4) << std::setfill('0') << index << ".txt";
+        fileName = oss.str();
+        index++;
+    } while (fs::exists(fileName));
+    return fileName;
+}
+
+// Function to format frame data
+std::string FormatFrameData(int frameId, double timeStamp, const cv::Mat& Tcw) {
+    std::ostringstream oss;
+    oss << "Frame ID: " << frameId << std::endl;
+    oss << "Timestamp: " << std::fixed << std::setprecision(5) << timeStamp << std::endl;
+    oss << "Pose (Tcw): " << Tcw << std::endl;
+    oss << "-------------------------" << std::endl;
+    return oss.str();
+}
+
+// Function to save current frame data
+void SaveFrameData(int frameId, double timeStamp, const cv::Mat& Tcw) {
+    std::string frameData = FormatFrameData(frameId, timeStamp, Tcw);
+    std::ofstream outFile(outputFileName, std::ios::app);
+    if (outFile.is_open()) {
+        outFile << frameData;
+        outFile.close();
+    } else {
+        std::cerr << "Failed to open file for writing: " << outputFileName << std::endl;
+    }
+}
+
+struct DefaultParameters {
+    // Camera parameters
+    float camera_fx = 597.4627f;
+    float camera_fy = 534.1414f;
+    float camera_cx = 367.3463f;
+    float camera_cy = 218.1773f;
+    float camera_k1 = -0.4355f;
+    float camera_k2 = 0.1922f;
+    float camera_p1 = -0.00137f;
+    float camera_p2 = 0.00018f;
+    float camera_k3 = 0.0f;
+    float camera_fps = 30.0f;
+    int camera_rgb = 1;
+    int camera_width = 720;
+    int camera_height = 480;
+    float camera_bf = 40.0f; // Зависит от конкретной камеры, стоит проверить
+
+    // ORB extractor parameters
+    int orb_nFeatures = 5000;
+    float orb_scaleFactor = 1.1f;
+    int orb_nLevels = 10;
+    int orb_iniThFAST = 12;
+    int orb_minThFAST = 8;
+
+    // Line extractor parameters
+    int line_on = 1;
+    int line_nfeatures = 60;
+    bool line_pyramidPrecomputation = false;
+    int line_nLevels = 8; // Количество уровней в пирамиде
+    float line_scaleFactor = 1.2f;
+    float line_sigma = 0.8f;
+    bool line_LSD_on = true;
+    int line_LSD_refine = 1;
+    float line_LSD_sigmaScale = 0.6f;
+    float line_LSD_quant = 2.0f;
+    float line_LSD_angTh = 22.5f;
+    float line_LSD_logEps = 1.0f;
+    float line_LSD_densityTh = 0.6f;
+    int line_LSD_nbins = 1024;
+    float line_minLineLength = 0.025f;
+    float line_lineTrackWeight = 2.0f;
+
+    // Viewer parameters
+    float viewer_KeyFrameSize = 0.05f;
+    float viewer_KeyFrameLineWidth = 1.0f;
+    float viewer_GraphLineWidth = 0.9f;
+    float viewer_PointSize = 2.0f;
+    float viewer_CameraSize = 0.08f;
+    float viewer_CameraLineWidth = 3.0f;
+    float viewer_ViewpointX = 0.0f;
+    float viewer_ViewpointY = -0.7f;
+    float viewer_ViewpointZ = -1.8f;
+    float viewer_ViewpointF = 500.0f;
+
+    // Initialization parameters
+    int initialization_numMinFeaturesRGBD = 500;
+    int initialization_numMinFeaturesStereo = 500;
+    int initialization_numMinFeaturesMono = 100;
+
+    // Depth model parameters
+    float depth_sigmaZFactor = 0.001f;
+    int depthFilter_Morphological_on = 0;
+    float depthFilter_Morphological_cutoff = 20.0f;
+
+    // Keyframe generation parameters
+    bool keyframe_fovCentersBasedGeneration_on = false;
+    float keyframe_maxFovCentersDistance = 0.5f;
+
+    // Map object parameters
+    int mapObject_on = 0;
+    float mapObject_matchRatio = 0.7f;
+    int mapObject_numMinInliers = 20;
+    float mapObject_maxReprojectionError = 5.0f;
+    float mapObject_maxSim3Error = 1.0f;
+};
+static DefaultParameters defaults;
+
+void SaveCameraParametersToFile(std::string& fileName, cv::FileStorage& fSettings) {
+    std::ofstream outFile(fileName);
+    if (!outFile.is_open()) {
+        std::cerr << "Error: Cannot open file for writing: " << fileName << std::endl;
+        return;
+    }
+
+    outFile << "%YAML:1.0"<< endl << endl;
+    outFile << "# Camera Parameters" << endl;
+    outFile << "Camera.fx: " << Utils::GetParam(fSettings, "Camera.fx", defaults.camera_fx) << endl;
+    outFile << "Camera.fy: " << Utils::GetParam(fSettings, "Camera.fy", defaults.camera_fy) << endl;
+    outFile << "Camera.cx: " << Utils::GetParam(fSettings, "Camera.cx", defaults.camera_cx) << endl;
+    outFile << "Camera.cy: " << Utils::GetParam(fSettings, "Camera.cy", defaults.camera_cy) << endl;
+    outFile << "Camera.k1: " << Utils::GetParam(fSettings, "Camera.k1", defaults.camera_k1) << endl;
+    outFile << "Camera.k2: " << Utils::GetParam(fSettings, "Camera.k2", defaults.camera_k2) << endl;
+    outFile << "Camera.p1: " << Utils::GetParam(fSettings, "Camera.p1", defaults.camera_p1) << endl;
+    outFile << "Camera.p2: " << Utils::GetParam(fSettings, "Camera.p2", defaults.camera_p2) << endl;
+    outFile << "Camera.k3: " << Utils::GetParam(fSettings, "Camera.k3", defaults.camera_k3) << endl;
+    outFile << "Camera.fps: " << Utils::GetParam(fSettings, "Camera.fps", defaults.camera_fps) << endl;
+    outFile << "Camera.RGB: " << Utils::GetParam(fSettings, "Camera.RGB", defaults.camera_rgb) << endl;
+    outFile << "Camera.width: " << Utils::GetParam(fSettings, "Camera.width", defaults.camera_width) << endl;
+    outFile << "Camera.height: " << Utils::GetParam(fSettings, "Camera.height", defaults.camera_height) << endl << endl;
+
+    outFile << "# ORB Parameters" << endl;
+    outFile << "ORBextractor.nFeatures: " << Utils::GetParam(fSettings, "ORBextractor.nFeatures", defaults.orb_nFeatures) << endl;
+    outFile << "ORBextractor.scaleFactor: " << Utils::GetParam(fSettings, "ORBextractor.scaleFactor", defaults.orb_scaleFactor) << endl;
+    outFile << "ORBextractor.nLevels: " << Utils::GetParam(fSettings, "ORBextractor.nLevels", defaults.orb_nLevels) << endl;
+    outFile << "ORBextractor.iniThFAST: " << Utils::GetParam(fSettings, "ORBextractor.iniThFAST", defaults.orb_iniThFAST) << endl;
+    outFile << "ORBextractor.minThFAST: " << Utils::GetParam(fSettings, "ORBextractor.minThFAST", defaults.orb_minThFAST) << endl << endl;
+
+    outFile << "# Line Parameters" << endl;
+    outFile << "Line.on: " << Utils::GetParam(fSettings, "Line.on", defaults.line_on) << endl;
+    outFile << "Line.nfeatures: " << Utils::GetParam(fSettings, "Line.nfeatures", defaults.line_nfeatures) << endl;
+    outFile << "Line.pyramidPrecomputation: " << Utils::GetParam(fSettings, "Line.pyramidPrecomputation", defaults.line_pyramidPrecomputation) << endl;
+    outFile << "Line.nLevels: " << Utils::GetParam(fSettings, "Line.nLevels", defaults.line_nLevels) << endl;
+    outFile << "Line.scaleFactor: " << Utils::GetParam(fSettings, "Line.scaleFactor", defaults.line_scaleFactor) << endl;
+    outFile << "Line.sigma: " << Utils::GetParam(fSettings, "Line.sigma", defaults.line_sigma) << endl;
+    outFile << "Line.LSD.on: " << Utils::GetParam(fSettings, "Line.LSD.on", defaults.line_LSD_on) << endl;
+    outFile << "Line.LSD.refine: " << Utils::GetParam(fSettings, "Line.LSD.refine", defaults.line_LSD_refine) << endl;
+    outFile << "Line.LSD.sigmaScale: " << Utils::GetParam(fSettings, "Line.LSD.sigmaScale", defaults.line_LSD_sigmaScale) << endl;
+    outFile << "Line.LSD.quant: " << Utils::GetParam(fSettings, "Line.LSD.quant", defaults.line_LSD_quant) << endl;
+    outFile << "Line.LSD.angTh: " << Utils::GetParam(fSettings, "Line.LSD.angTh", defaults.line_LSD_angTh) << endl;
+    outFile << "Line.LSD.logEps: " << Utils::GetParam(fSettings, "Line.LSD.logEps", defaults.line_LSD_logEps) << endl;
+    outFile << "Line.LSD.densityTh: " << Utils::GetParam(fSettings, "Line.LSD.densityTh", defaults.line_LSD_densityTh) << endl;
+    outFile << "Line.LSD.nbins: " << Utils::GetParam(fSettings, "Line.LSD.nbins", defaults.line_LSD_nbins) << endl;
+    outFile << "Line.minLineLength: " << Utils::GetParam(fSettings, "Line.minLineLength", defaults.line_minLineLength) << endl;
+    outFile << "Line.lineTrackWeight: " << Utils::GetParam(fSettings, "Line.lineTrackWeight", defaults.line_lineTrackWeight) << endl << endl;
+
+    outFile << "# Viewer Parameters" << endl;
+    outFile << "Viewer.KeyFrameSize: " << Utils::GetParam(fSettings, "Viewer.KeyFrameSize", defaults.viewer_KeyFrameSize) << endl;
+    outFile << "Viewer.KeyFrameLineWidth: " << Utils::GetParam(fSettings, "Viewer.KeyFrameLineWidth", defaults.viewer_KeyFrameLineWidth) << endl;
+    outFile << "Viewer.GraphLineWidth: " << Utils::GetParam(fSettings, "Viewer.GraphLineWidth", defaults.viewer_GraphLineWidth) << endl;
+    outFile << "Viewer.PointSize: " << Utils::GetParam(fSettings, "Viewer.PointSize", defaults.viewer_PointSize) << endl;
+    outFile << "Viewer.CameraSize: " << Utils::GetParam(fSettings, "Viewer.CameraSize", defaults.viewer_CameraSize) << endl;
+    outFile << "Viewer.CameraLineWidth: " << Utils::GetParam(fSettings, "Viewer.CameraLineWidth", defaults.viewer_CameraLineWidth) << endl;
+    outFile << "Viewer.ViewpointX: " << Utils::GetParam(fSettings, "Viewer.ViewpointX", defaults.viewer_ViewpointX) << endl;
+    outFile << "Viewer.ViewpointY: " << Utils::GetParam(fSettings, "Viewer.ViewpointY", defaults.viewer_ViewpointY) << endl;
+    outFile << "Viewer.ViewpointZ: " << Utils::GetParam(fSettings, "Viewer.ViewpointZ", defaults.viewer_ViewpointZ) << endl;
+    outFile << "Viewer.ViewpointF: " << Utils::GetParam(fSettings, "Viewer.ViewpointF", defaults.viewer_ViewpointF) << endl << endl;
+
+    outFile << "# Depth Filter Parameters" << endl;
+    outFile << "DepthFilter.Morphological.on: " << Utils::GetParam(fSettings, "DepthFilter.Morphological.on", defaults.depthFilter_Morphological_on) << endl;
+    outFile << "DepthFilter.Morphological.cutoff: " << Utils::GetParam(fSettings, "DepthFilter.Morphological.cutoff", defaults.depthFilter_Morphological_cutoff) << endl << endl;
+    
+    outFile << "# KeyFrame Parameters" << endl;
+    outFile << "KeyFrame.fovCentersBasedGeneration.on: " << Utils::GetParam(fSettings, "KeyFrame.fovCentersBasedGeneration.on", defaults.keyframe_fovCentersBasedGeneration_on) << endl;
+    outFile << "KeyFrame.maxFovCentersDistance: " << Utils::GetParam(fSettings, "KeyFrame.maxFovCentersDistance", defaults.keyframe_maxFovCentersDistance) << endl << endl;
+
+    outFile << "# Map Object Parameters" << endl;
+    outFile << "MapObject.on: " << Utils::GetParam(fSettings, "MapObject.on", defaults.mapObject_on) << endl;
+    outFile << "MapObject.matchRatio: " << Utils::GetParam(fSettings, "MapObject.matchRatio", defaults.mapObject_matchRatio) << endl;
+    outFile << "MapObject.numMinInliers: " << Utils::GetParam(fSettings, "MapObject.numMinInliers", defaults.mapObject_numMinInliers) << endl;
+    outFile << "MapObject.maxReprojectionError: " << Utils::GetParam(fSettings, "MapObject.maxReprojectionError", defaults.mapObject_maxReprojectionError) << endl;
+    outFile << "MapObject.maxSim3Error: " << Utils::GetParam(fSettings, "MapObject.maxSim3Error", defaults.mapObject_maxSim3Error) << endl << endl << endl;
+
+    outFile.close();
+}
+
+void InitializeOutputFile(cv::FileStorage& fSettings) {
+    outputFileName = GenerateUniqueFileName("pose_and_frame_data_");
+    SaveCameraParametersToFile(outputFileName, fSettings);
+}
+
 Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Map *pMap, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor):
     mState(NO_IMAGES_YET), mSensor(sensor), mbOnlyTracking(false), mbVO(false), mpORBVocabulary(pVoc),
     mpKeyFrameDB(pKFDB), mpInitializer(static_cast<Initializer*>(NULL)), mpSystem(pSys), mpViewer(NULL),
@@ -121,6 +323,8 @@ Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer,
     // Load camera parameters from settings file
 
     cv::FileStorage fSettings(strSettingPath, cv::FileStorage::READ);
+    InitializeOutputFile(fSettings);
+
     float fx = fSettings["Camera.fx"];
     float fy = fSettings["Camera.fy"];
     float cx = fSettings["Camera.cx"];
@@ -432,6 +636,38 @@ cv::Mat Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat &imRe
     return mCurrentFrame.mTcw.clone();
 }
 
+void Tracking::CountAndDisplayFeatures(const std::string& source)
+{
+    int tracked_points = 0;
+    int lost_points = 0;
+    int tracked_lines = 0;
+    int lost_lines = 0;
+
+    // Подсчёт отслеживаемых и потерянных точек
+    for (int i = 0; i < mCurrentFrame.N; i++) {
+        if (mCurrentFrame.mvpMapPoints[i]) {
+            if (!mCurrentFrame.mvbOutlier[i])
+                tracked_points++;
+            else
+                lost_points++;
+        }
+    }
+
+    // Подсчёт отслеживаемых и потерянных линий
+    for (int i = 0; i < mCurrentFrame.Nlines; i++) {
+        if (mCurrentFrame.mvpMapLines[i]) {
+            if (!mCurrentFrame.mvbLineOutlier[i])
+                tracked_lines++;
+            else
+                lost_lines++;
+        }
+    }
+
+    std::cout << "[" << source << "] Tracked Points: " << tracked_points 
+              << ", Lost Points: " << lost_points << std::endl;
+    std::cout << "[" << source << "] Tracked Lines: " << tracked_lines 
+              << ", Lost Lines: " << lost_lines << std::endl;
+}
 
 cv::Mat Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp)
 {
@@ -517,8 +753,14 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
     return mCurrentFrame.mTcw.clone();
 }
 
+
 void Tracking::Track()
 {
+    cout << "\033[H"; // move cursor to top left corner
+    // cout << "\033[2J"; // clear terminal 
+
+    cout << "   Frame ID: " << mCurrentFrame.mnId << ", State: " << mState << endl;
+    
     if(mState==NO_IMAGES_YET)
     {
         mState = NOT_INITIALIZED;
@@ -532,19 +774,29 @@ void Tracking::Track()
     if(mState==RELOCALIZE_IN_LOADED_MAP)
     {
         InitForRelocalizationInMap();
+        cout << "Relocalizing in loaded map" << endl;
     }
 
     if(mState==NOT_INITIALIZED)
     {
         if(mSensor==System::STEREO || mSensor==System::RGBD)
+        {
+            cout << "Performing StereoInitialization" << endl;
             StereoInitialization();
+        }
         else
-            MonocularInitialization(); /// < TODO: integrate line initialization ?
+        {
+            cout << "Performing MonocularInitialization" << endl;
+            MonocularInitialization();
+        }
 
         mpFrameDrawer->Update(this);
 
         if(mState!=OK)
+        {
+            cout << "Initialization failed, exiting Track()" << endl;
             return;
+        }
     }
     else
     {
@@ -562,6 +814,7 @@ void Tracking::Track()
             if(mState==OK)
             {
                 // Local Mapping might have changed some MapPoints tracked in last frame
+                // cout << "Tracking with local mapping active" << endl;
                 CheckReplacedInLastFrame(); /// < OKL
 
                 if(mVelocity.empty() || mCurrentFrame.mnId<mnLastRelocFrameId+2)
@@ -572,11 +825,15 @@ void Tracking::Track()
                 {
                     bOK = TrackWithMotionModel();  /// < OKL
                     if(!bOK)
+                    {
+                        cout << "Motion model tracking failed, fallback to TrackReferenceKeyFrame" << endl;
                         bOK = TrackReferenceKeyFrame(); /// < OKL
+                    }
                 }
             }
             else
             {
+                cout << "Relocalization needed" << endl;
                 bOK = Relocalization();
             }
         }
@@ -586,6 +843,7 @@ void Tracking::Track()
 
             if(mState==LOST)
             {
+                cout << "Localization mode: Relocalization" << endl;    
                 bOK = Relocalization();
             }
             else
@@ -596,10 +854,12 @@ void Tracking::Track()
 
                     if(!mVelocity.empty())
                     {
+                        cout << "Using motion model" << endl;
                         bOK = TrackWithMotionModel(); /// < OKL
                     }
                     else
                     {
+                        cout << "Tracking with reference keyframe" << endl;
                         bOK = TrackReferenceKeyFrame(); /// < OKL
                     }
                 }
@@ -611,6 +871,7 @@ void Tracking::Track()
                     // If relocalization is successful we choose that solution, otherwise we retain
                     // the "visual odometry" solution.
 
+                    cout << "Using visual odometry points" << endl; 
                     bool bOKMM = false;
                     bool bOKReloc = false;
                     vector<MapPointPtr> vpMPsMM;
@@ -682,7 +943,10 @@ void Tracking::Track()
         if(!mbOnlyTracking)
         {
             if(bOK)
+            {
+                // cout << "Tracking local map" << endl;
                 bOK = TrackLocalMap(); /// < OKL
+            }
         }
         else
         {
@@ -690,7 +954,10 @@ void Tracking::Track()
             // a local map and therefore we do not perform TrackLocalMap(). Once the system relocalizes
             // the camera we will use the local map again.
             if(bOK && !mbVO)
+            {
+                // cout << "Tracking local map" << endl;
                 bOK = TrackLocalMap(); /// < OKL
+            }
         }
         
         // < Detect objects 
@@ -841,9 +1108,13 @@ void Tracking::Track()
         mLastFrame = Frame(mCurrentFrame);
     }
 
+    SaveFrameData(mCurrentFrame.mnId, mCurrentFrame.mTimeStamp, mCurrentFrame.mTcw);
+
     // Store frame pose information to retrieve the complete camera trajectory afterwards.
     if(!mCurrentFrame.mTcw.empty())
     {
+        cout << "Frame ID: " << mCurrentFrame.mnId << " successfully tracked. Pose:\n" << mCurrentFrame.mTcw << endl;
+
         cv::Mat Tcr = mCurrentFrame.mTcw*mCurrentFrame.mpReferenceKF->GetPoseInverse();
         mlRelativeFramePoses.push_back(Tcr);
         mlpReferences.push_back(mpReferenceKF);
@@ -852,12 +1123,15 @@ void Tracking::Track()
     }
     else
     {
+        cout << "Tracking lost for Frame ID: " << mCurrentFrame.mnId << endl;
+    
         // This can happen if tracking is lost
         mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
         mlpReferences.push_back(mlpReferences.back());
         mlFrameTimes.push_back(mlFrameTimes.back());
         mlbLost.push_back(mState==LOST);
     }
+
 
 }
 
@@ -1234,6 +1508,8 @@ bool Tracking::TrackReferenceKeyFrame()
         numLineMatches = lineMatcher.SearchByKnn(mpReferenceKF, mCurrentFrame, vpMapLineMatches);
         
     }
+
+    cout << "Point Matches: " << nmatches << ", Line Matches: " << numLineMatches << endl;
     
     if(nmatches<15)
     {
@@ -1307,7 +1583,9 @@ bool Tracking::TrackReferenceKeyFrame()
         std::cout << "Tracking::TrackReferenceKeyFrame() - FAILURE - (nmatchesMap + mnLineTrackWeigth*nmatchesMapLines)<10: " << nmatchesMapFeatures << std::endl;
         return false;
     }
-    
+
+    CountAndDisplayFeatures("TrackReferenceKeyFrame");
+
     return ( nmatchesMapFeatures >= 10 );
 }
 
@@ -1525,6 +1803,8 @@ bool Tracking::TrackWithMotionModel()
 #endif        
     }
 
+    // cout << "TrackWithMotionModel PMatcher: " << nPointmatches << ", LMatcher: " << nLineMatches << endl;
+
     if(nPointmatches<20)
     {
         std::cout << "Tracking::TrackWithMotionModel() - nPointmatches<20: relying on " << nPointmatches << " point matches and " << nLineMatches << " line matches " << std::endl; 
@@ -1597,6 +1877,8 @@ bool Tracking::TrackWithMotionModel()
         std::cout << "Tracking::TrackWithMotionModel() - FAILURE - (nMatchesMapPoints + sknLineTrackWeigth*nMatchesMapLines)<10: " << nMatchesMapPoints + sknLineTrackWeigth*nMatchesMapLines << std::endl; 
         return false;
     }
+
+    CountAndDisplayFeatures("TrackWithMotionModel");
     
     return nMatchesMapFeatures>=10;
 }
@@ -1688,6 +1970,7 @@ bool Tracking::TrackLocalMap()
     }
     else
     {
+        CountAndDisplayFeatures("TrackLocalMap");
         return true;
     }
 }

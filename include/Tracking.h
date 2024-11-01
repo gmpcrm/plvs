@@ -171,6 +171,7 @@ static std::vector<std::string> vTrackingStateStrings; // must be kept in sync w
     void Reset();
 
 protected:
+    void CountAndDisplayFeatures(const std::string& source);
 
     // Main tracking function. It is independent of the input sensor.
     void Track();

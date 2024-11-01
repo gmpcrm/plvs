@@ -142,3 +142,4 @@ Results/
 *.out
 *.app
 Thirdparty/g2o_new
+Scripts/*.txt
